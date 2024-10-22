@@ -1,0 +1,1 @@
+This is a dummy project to test github features and flutter mobile app development
