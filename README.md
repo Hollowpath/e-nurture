@@ -1,1 +1,43 @@
-This is a dummy project to test github features and flutter mobile app development
+# Group Name: [Your Group Name]
+
+## Group Members
+- Name: [Member 1 Name], Matric No: [Member 1 Matric No]
+- Name: [Member 2 Name], Matric No: [Member 2 Matric No]
+- Name: [Member 3 Name], Matric No: [Member 3 Matric No]
+
+## Project Initiation
+### Title
+[Your Mobile App Title]
+
+### Background of the Problem
+[Description of the problem your app addresses]
+
+### Purpose or Objective
+[Purpose or objective of your mobile app]
+
+### Target User
+[Description of the target user for your app]
+
+### Preferred Platform
+[Preferred platform for your app (e.g., iOS, Android)]
+
+### Features and Functionalities
+[List of features and functionalities of your app]
+
+## Requirement Analysis
+### Technical Feasibility
+[Evaluation of technical feasibility and back-end assessments]
+
+### Compatibility
+[Ensure compatibility of the app with the chosen platform]
+
+### Logical Design
+- Sequence Diagram: [Link or embed your sequence diagram]
+- Screen Navigation Flow: [Link or embed your screen navigation flow]
+
+## Planning
+### Gantt Chart and Timeline
+[Include a detailed Gantt chart and timeline for the app development]
+
+## References
+[Include in-text citation and reference list in APA format]
