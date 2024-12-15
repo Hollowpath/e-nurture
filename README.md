@@ -16,7 +16,8 @@
 [Purpose or objective of your mobile app]
 
 ### Target User
-[Description of the target user for your app]
+- Nanny looking for work
+- Parents that need to find somebody to take care of their child
 
 ### Preferred Platform
 [Preferred platform for your app (e.g., iOS, Android)]
