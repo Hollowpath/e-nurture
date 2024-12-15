@@ -1,7 +1,7 @@
 # Group Name: [Your Group Name]
 
 ## Group Members
-- Name: [Member 1 Name], Matric No: [Member 1 Matric No]
+- Name: Faizal Akhtar Bin Azhar, Matric No: 2124565
 - Name: Dhazreel Aiman Bin Darmawi, Matric No: 2116597
 - Name: [Member 3 Name], Matric No: [Member 3 Matric No]
 
