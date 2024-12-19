@@ -60,7 +60,7 @@ The following features and functionalities leverage key mobile device capabiliti
 
 ## Planning
 ### Gantt Chart and Timeline
-[Include a detailed Gantt chart and timeline for the app development]
+![Gantt Chart for e-Nurture](https://drive.google.com/uc?export=view&id=13dtG3OyqcSJh5PsRyAOwc9_9JOam2BP2)
 
 ## References
 Clark, K., Lovich, D., McBride, L., De Santis, N., Milian, R., & Baskin, T. (2023, May 3). Reinventing Childcare for Today’s Workforce. Boston Consulting Group. https://www.bcg.com/publications/2023/reinventing-the-childcare-industry-for-the-workforce-of-today?form=MG0AV3
