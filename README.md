@@ -47,4 +47,4 @@ The childcare industry faces challenges like limited caregiver access, unreliabl
 [Include a detailed Gantt chart and timeline for the app development]
 
 ## References
-https://www.bcg.com/publications/2023/reinventing-the-childcare-industry-for-the-workforce-of-today?form=MG0AV3
+Clark, K., Lovich, D., McBride, L., De Santis, N., Milian, R., & Baskin, T. (2023, May 3). Reinventing Childcare for Today’s Workforce. Boston Consulting Group. https://www.bcg.com/publications/2023/reinventing-the-childcare-industry-for-the-workforce-of-today?form=MG0AV3
