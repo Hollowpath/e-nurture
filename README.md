@@ -1,5 +1,3 @@
-# Group Name: [Your Group Name]
-
 ## Group Members
 - Name: Faizal Akhtar Bin Azhar, Matric No: 
 - Name: Dhazreel Aiman Bin Darmawi, Matric No: 2116597
