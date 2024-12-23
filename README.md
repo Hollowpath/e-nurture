@@ -52,7 +52,21 @@ The following features and functionalities leverage key mobile device capabiliti
 [Evaluation of technical feasibility and back-end assessments]
 
 ### Compatibility
-[Ensure compatibility of the app with the chosen platform]
+## Software
+- Google Play Services: For geolocation and in-app messaging.
+- Material Design Components: For a consistent user interface experience in an Android device
+- Firebase Backend Integration: For authentication, real-time database, and notifications.
+## Hardware
+- GPS Module: For geolocation services.
+- Camera: For document uploads and profile photos.
+- Push Notification Support: Utilizes Firebase Cloud Messaging for real-time updates.
+## Testing
+- Android Emulator: Testing the app on the Flutter emulator and Android Studio to ensure compatibility and functionality.
+- Physical Devices: Testing on various Android phone models to verify performance and user experience across different devices.
+### Phone models used for testing:
+- Samsung S21+ (specs: https://www.gsmarena.com/samsung_galaxy_s21+_5g-10625.php )
+- Faizals's phone (specs: )
+- Dhaz's phone (specs: )
 
 ### Logical Design
 - Sequence Diagram: [Link or embed your sequence diagram]
