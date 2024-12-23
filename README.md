@@ -61,7 +61,7 @@ The following features and functionalities leverage key mobile device capabiliti
 - Camera: For document uploads and profile photos.
 - Push Notification Support: Utilizes Firebase Cloud Messaging for real-time updates.
 ## Testing
-- Flutter Emulator: Testing the app on the Flutter emulator to ensure compatibility and functionality.
+- Android Emulator: Testing the app on the Flutter emulator and Android Studio to ensure compatibility and functionality.
 - Physical Devices: Testing on various Android phone models to verify performance and user experience across different devices.
 ### Phone models used for testing:
 - Samsung S21+ (specs: https://www.gsmarena.com/samsung_galaxy_s21+_5g-10625.php )
