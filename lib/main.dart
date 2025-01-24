@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'profile.dart'; // Import the profile.dart file
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,14 +50,14 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
   int _selectedIndex = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
+  static final List<Widget> _pages = <Widget>[
+    Center(child: Text('Home Page')),
+    Center(child: Text('Booking Page')),
+    Center(child: Text('Donation Page')),
+    ProfilePage(), // Profile page
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -71,24 +72,9 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -97,15 +83,20 @@ class _MyHomePageState extends State<MyHomePage> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.book_online),
-            label: 'Search',
+            icon: Icon(Icons.book),
+            label: 'Booking',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle),
+            icon: Icon(Icons.favorite),
+            label: 'Donation',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people),
             label: 'Profile',
           ),
         ],
         currentIndex: _selectedIndex,
+        unselectedItemColor: Colors.grey,
         selectedItemColor: Colors.amber[800],
         onTap: _onItemTapped,
       ),
