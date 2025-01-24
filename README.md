@@ -69,7 +69,8 @@ The following features and functionalities leverage key mobile device capabiliti
 - Dhaz's phone (specs: )
 
 ### Logical Design
-- Sequence Diagram: [Link or embed your sequence diagram]
+- Sequence Diagram: ![e-nurture drawio](https://github.com/user-attachments/assets/1c9b74a8-48cc-48c6-8d52-74e49b18ae6f)
+
 - Screen Navigation Flow: [Link or embed your screen navigation flow]
 
 ## Planning
