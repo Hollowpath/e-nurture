@@ -3,7 +3,8 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  file_selector_windows
+  firebase_auth       # From hanifms branch
+  file_selector_windows  # From main branch
   firebase_core
   geolocator_windows
   url_launcher_windows

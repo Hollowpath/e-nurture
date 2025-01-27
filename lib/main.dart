@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'profile.dart'; // Import the profile.dart file
+import 'login_page.dart';
+import 'home_screen.dart';
+import 'profile.dart'; // From main branch
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +14,7 @@ void main() async {
         apiKey: "AIzaSyDUeV-ZOI0EoSeIrF00DgwhhYsI-NlTJyA",
         authDomain: "e-nurture.firebaseapp.com",
         projectId: "e-nurture",
-        storageBucket: "e-nurture.firebasestorage.app",
+        storageBucket: "e-nurture.firebasasestorage.app",
         messagingSenderId: "888588822737",
         appId: "1:888588822737:web:c0601454c44f5c17b1bdf0",
       ),
@@ -30,12 +32,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'E-Nurture',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      // Start with LoginPage
+      home: const LoginPage(),
+      // Add route for the home navigation
+      routes: {
+        '/home': (context) => const MyHomePage(title: 'E-Nurture'),
+      },
     );
   }
 }
@@ -52,11 +60,12 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
 
+  // Replace the first page with your HomeScreen
   static final List<Widget> _pages = <Widget>[
-    Center(child: Text('Home Page')),
-    Center(child: Text('Booking Page')),
-    Center(child: Text('Donation Page')),
-    ProfilePage(), // Profile page
+    const HomeScreen(), // From hanifms branch
+    const Center(child: Text('Booking Page')),
+    const Center(child: Text('Donation Page')),
+    const ProfilePage(), // From main branch
   ];
 
   void _onItemTapped(int index) {
