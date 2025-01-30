@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/parent_card.dart';
 
 class ParentBookingListPage extends StatefulWidget {
   const ParentBookingListPage({Key? key}) : super(key: key);
@@ -68,7 +69,17 @@ class _BookingListPageState extends State<ParentBookingListPage> {
                     itemCount: bookings.length,
                     itemBuilder: (context, index) {
                       final booking = bookings[index];
-                      return _buildBookingCard(booking);
+                      return ParentCard(
+                        name: booking['caregiverName'],
+                        age: booking['caregiverAge'],
+                        rating: booking['rating'],
+                        hourlyRate: 20, // Example value
+                        certifications: ['CPR', 'First Aid'], // Example value
+                        experience: '5 years', // Example value
+                        availability: 'Weekdays', // Example value
+                        distance: '5 miles', // Example value
+                        image: 'assets/images/caregiver.png', // Example value
+                      );
                     },
                   ),
           ),
@@ -80,83 +91,6 @@ class _BookingListPageState extends State<ParentBookingListPage> {
           // Navigate to booking screen
         },
         child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  // Booking Card Widget
-  Widget _buildBookingCard(Map<String, dynamic> booking) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Caregiver Information
-            Row(
-              children: [
-                const CircleAvatar(
-                  backgroundImage: AssetImage('assets/caregiver.jpg'), // Add caregiver image
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${booking['caregiverName']}, ${booking['caregiverAge']}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        Text('${booking['rating']}'),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // Booking Details
-            Text('Date: ${booking['date']}'),
-            Text('Time: ${booking['time']}'),
-            Text('Location: ${booking['location']}'),
-            Text('Status: ${booking['status']}'),
-            const SizedBox(height: 10),
-            // Quick Actions
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    // Navigate to booking details
-                  },
-                  child: const Text('View Details'),
-                ),
-                const SizedBox(width: 10),
-                if (booking['status'] == 'Upcoming')
-                  ElevatedButton(
-                    onPressed: () {
-                      // Reschedule booking
-                    },
-                    child: const Text('Reschedule'),
-                  ),
-                if (booking['status'] == 'Upcoming')
-                  const SizedBox(width: 10),
-                if (booking['status'] == 'Upcoming')
-                  ElevatedButton(
-                    onPressed: () {
-                      // Cancel booking
-                    },
-                    child: const Text('Cancel'),
-                  ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
