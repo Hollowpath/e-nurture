@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'register_page.dart';
 import '../parent/parent_app.dart';
+import '../caregiver/caregiver_app.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
