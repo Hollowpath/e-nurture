@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'pages/booking_list_page.dart';
 import 'pages/home_screen.dart';
 import 'pages/profile_scree.dart';
+import 'pages/donation_page.dart';
 
 class ParentApp extends StatefulWidget {
   @override
@@ -17,10 +18,9 @@ class _ParentAppState extends State<ParentApp> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    ParentHomePage(),
-    const Text('Search Screen'),
-    ParentBookingListPage(),
-    const Text('Donate Screen'),
+    const ParentHomePage(),
+    const ParentBookingListPage(),
+    const DonationPage(),
     ParentProfileScreen(),
   ];
 
@@ -31,8 +31,8 @@ class _ParentAppState extends State<ParentApp> {
         title: const Text('E-Nurture Home'),
         actions: [
           IconButton(
-            icon: Row(
-              children: const [
+            icon: const Row(
+              children: [
               Icon(Icons.logout),
               SizedBox(width: 5),
               Text('Logout'),

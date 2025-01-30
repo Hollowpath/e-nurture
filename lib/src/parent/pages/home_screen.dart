@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'search_page.dart';
 
 class ParentHomePage extends StatelessWidget {
   const ParentHomePage({super.key});
@@ -35,7 +36,7 @@ class _ParentHomePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Search Bar
-              _buildSearchBar(),
+              _buildSearchBar(context),
               const SizedBox(height: 20),
 
               // Promotional Banner
@@ -76,18 +77,32 @@ class _ParentHomePage extends StatelessWidget {
   }
 
   // Search Bar
-  Widget _buildSearchBar() {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: 'Search for caregivers...',
-        prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+  Widget _buildSearchBar(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // Navigate to search page
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => SearchPage()),
+        );
+      },
+      child: AbsorbPointer(
+        child: TextField(
+          decoration: InputDecoration(
+            hintText: 'Search for caregivers...',
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
         ),
       ),
     );
   }
 
+  
+
+  
   // Promotional Banner
   Widget _buildPromotionalBanner() {
     return Container(
