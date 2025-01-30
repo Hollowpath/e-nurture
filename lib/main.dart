@@ -1,9 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'login_page.dart';
-import 'home_screen.dart';
-import 'profile.dart'; // From main branch
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'login_screen.dart';
+import 'parent_home.dart';
+import 'childcare_home';
+import 'donor_home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,77 +41,59 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      // Start with LoginPage
-      home: const LoginPage(),
-      // Add route for the home navigation
+      home: AuthWrapper(),
       routes: {
-        '/home': (context) => const MyHomePage(title: 'E-Nurture'),
+        '/login': (context) => LoginScreen(),
+        '/parent': (context) => ParentHome(),
+        '/childcare': (context) => ChildcareHome(),
+        '/donor': (context) => DonorHome(),
       },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _selectedIndex = 0;
-
-  // Replace the first page with your HomeScreen
-  static final List<Widget> _pages = <Widget>[
-    const HomeScreen(), // From hanifms branch
-    const Center(child: Text('Booking Page')),
-    const Center(child: Text('Donation Page')),
-    const ProfilePage(), // From main branch
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
+class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book),
-            label: 'Booking',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Donation',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Profile',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        unselectedItemColor: Colors.grey,
-        selectedItemColor: Colors.amber[800],
-        onTap: _onItemTapped,
-      ),
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.active) {
+          final User? user = snapshot.data;
+          if (user == null) {
+            return LoginScreen();
+          } else {
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get(),
+              builder: (context, roleSnapshot) {
+                if (roleSnapshot.connectionState == ConnectionState.done) {
+                  if (roleSnapshot.hasData && roleSnapshot.data!.exists) {
+                    final role = roleSnapshot.data!['role'] as String;
+                    
+                    switch (role) {
+                      case 'Parent':
+                        return ParentHome();
+                      case 'Childcare Giver':
+                        return ChildcareHome();
+                      case 'Donor':
+                        return DonorHome();
+                      default:
+                        return LoginScreen();
+                    }
+                  }
+                  return LoginScreen();
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
+            );
+          }
+        }
+        return const Center(child: CircularProgressIndicator());
+      },
     );
   }
 }
+
