@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_screen.dart';
 import 'parent_home.dart';
-import 'childcare_home';
+import 'childcare_home.dart';
 import 'donor_home.dart';
 
 void main() async {
@@ -96,4 +96,3 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
-
