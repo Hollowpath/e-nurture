@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
-class ProfilePage extends StatefulWidget {
+class ParentProfileScreen extends StatefulWidget {
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ParentProfileScreen> {
   XFile? _imageFile;
   final ImagePicker _picker = ImagePicker();
 

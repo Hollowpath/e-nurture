@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'register_page.dart';
-import 'home_screen.dart';
+import '../parent/parent_app.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -31,7 +31,7 @@ class _LoginPageState extends State<LoginPage> {
       
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => ParentApp()),
       );
       
     } on FirebaseAuthException catch (e) {
