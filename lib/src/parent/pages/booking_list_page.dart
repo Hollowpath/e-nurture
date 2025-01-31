@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/parent_card.dart';
 
 class ParentBookingListPage extends StatefulWidget {
-  const ParentBookingListPage({Key? key}) : super(key: key);
+  const ParentBookingListPage({super.key});
 
   @override
   _BookingListPageState createState() => _BookingListPageState();
@@ -74,7 +74,7 @@ class _BookingListPageState extends State<ParentBookingListPage> {
                         age: booking['caregiverAge'],
                         rating: booking['rating'],
                         hourlyRate: 20, // Example value
-                        certifications: ['CPR', 'First Aid'], // Example value
+                        certifications: const ['CPR', 'First Aid'], // Example value
                         experience: '5 years', // Example value
                         availability: 'Weekdays', // Example value
                         distance: '5 miles', // Example value

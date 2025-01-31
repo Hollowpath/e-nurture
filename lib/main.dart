@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'login_screen.dart';
-import 'parent_home.dart';
-import 'childcare_home.dart';
-import 'donor_home.dart';
+import 'src/auth/login_screen.dart';
+import 'src/parent/parent_app.dart';
+import 'src/caregiver/caregiver_app.dart';
+import 'package:get/get.dart';
+// import 'donor_home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'E-Nurture',
       theme: ThemeData(
@@ -44,15 +45,17 @@ class MyApp extends StatelessWidget {
       home: AuthWrapper(),
       routes: {
         '/login': (context) => LoginScreen(),
-        '/parent': (context) => ParentHome(),
-        '/childcare': (context) => ChildcareHome(),
-        '/donor': (context) => DonorHome(),
+        '/parent': (context) => ParentApp(),
+        '/childcare': (context) => CaregiverApp(),
+        // '/donor': (context) => DonorHome(),
       },
     );
   }
 }
 
 class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -75,11 +78,11 @@ class AuthWrapper extends StatelessWidget {
                     
                     switch (role) {
                       case 'Parent':
-                        return ParentHome();
+                        return ParentApp();
                       case 'Childcare Giver':
-                        return ChildcareHome();
-                      case 'Donor':
-                        return DonorHome();
+                        return CaregiverApp();
+                      // case 'Donor':
+                      //   return DonorHome();
                       default:
                         return LoginScreen();
                     }

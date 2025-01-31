@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CaregiverProfileScreen extends StatelessWidget {
-  const CaregiverProfileScreen({Key? key}) : super(key: key);
+  const CaregiverProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -84,38 +84,38 @@ class CaregiverProfileScreen extends StatelessWidget {
 
   // Personal Information Widget
   Widget _buildPersonalInformation() {
-    return Card(
+    return const Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Personal Information',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            const ListTile(
+            SizedBox(height: 10),
+            ListTile(
               title: Text('Name'),
               subtitle: Text('Sarah Smith'),
               trailing: Icon(Icons.edit),
             ),
-            const ListTile(
+            ListTile(
               title: Text('Age'),
               subtitle: Text('36'),
               trailing: Icon(Icons.edit),
             ),
-            const ListTile(
+            ListTile(
               title: Text('Email'),
               subtitle: Text('sarah@example.com'),
               trailing: Icon(Icons.edit),
             ),
-            const ListTile(
+            ListTile(
               title: Text('Phone'),
               subtitle: Text('+1 123-456-7890'),
               trailing: Icon(Icons.edit),
             ),
-            const ListTile(
+            ListTile(
               title: Text('Bio'),
               subtitle: Text('Experienced with toddlers and special needs children.'),
               trailing: Icon(Icons.edit),
@@ -191,23 +191,23 @@ class CaregiverProfileScreen extends StatelessWidget {
 
   // Rates and Services Widget
   Widget _buildRatesAndServices() {
-    return Card(
+    return const Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Rates and Services',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            const ListTile(
+            SizedBox(height: 10),
+            ListTile(
               title: Text('Hourly Rate'),
               subtitle: Text('\$20'),
               trailing: Icon(Icons.edit),
             ),
-            const ListTile(
+            ListTile(
               title: Text('Services Offered'),
               subtitle: Text('Tutoring, Overnight Care'),
               trailing: Icon(Icons.edit),
@@ -288,28 +288,28 @@ class CaregiverProfileScreen extends StatelessWidget {
 
   // Emergency Contact Information Widget
   Widget _buildEmergencyContact() {
-    return Card(
+    return const Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Emergency Contact',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            const ListTile(
+            SizedBox(height: 10),
+            ListTile(
               title: Text('Name'),
               subtitle: Text('John Doe'),
               trailing: Icon(Icons.edit),
             ),
-            const ListTile(
+            ListTile(
               title: Text('Relationship'),
               subtitle: Text('Spouse'),
               trailing: Icon(Icons.edit),
             ),
-            const ListTile(
+            ListTile(
               title: Text('Phone'),
               subtitle: Text('+1 987-654-3210'),
               trailing: Icon(Icons.edit),

@@ -5,10 +5,10 @@ class ParentBottomNavBar extends StatelessWidget {
   final Function(int) onTap;
 
   const ParentBottomNavBar({
-    Key? key,
+    super.key,
     required this.currentIndex,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

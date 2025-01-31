@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'widgets/caregiver_bottom_nav.dart';
-import '../auth/login_page.dart';
+import '../auth/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'pages/booking_list_page.dart';
@@ -9,6 +9,8 @@ import 'pages/profile_screen.dart';
 import 'pages/availability_page.dart';
 
 class CaregiverApp extends StatefulWidget {
+  const CaregiverApp({super.key});
+
   @override
   _CaregiverAppState createState() => _CaregiverAppState();
   
@@ -21,7 +23,7 @@ class _CaregiverAppState extends State<CaregiverApp> {
     const CaregiverHomeScreen(),
     const CaregiverBookingList(),
     const AvailabilityScreen(),
-    CaregiverProfileScreen(),
+    const CaregiverProfileScreen(),
   ];
 
   @override
@@ -42,7 +44,7 @@ class _CaregiverAppState extends State<CaregiverApp> {
               await FirebaseAuth.instance.signOut();
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const LoginPage()),
+                MaterialPageRoute(builder: (context) => LoginScreen()),
               );
             },
           )
