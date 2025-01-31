@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
-import 'widgets/parent_bottom_nav.dart';
+import 'widgets/caregiver_bottom_nav.dart';
 import '../auth/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'pages/booking_list_page.dart';
 import 'pages/home_screen.dart';
-import 'pages/profile_scree.dart';
-import 'pages/donation_page.dart';
+import 'pages/profile_screen.dart';
+import 'pages/availability_page.dart';
 
-class ParentApp extends StatefulWidget {
-  const ParentApp({super.key});
+class CaregiverApp extends StatefulWidget {
+  const CaregiverApp({super.key});
 
   @override
-  _ParentAppState createState() => _ParentAppState();
+  _CaregiverAppState createState() => _CaregiverAppState();
   
 }
 
-class _ParentAppState extends State<ParentApp> {
+class _CaregiverAppState extends State<CaregiverApp> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const ParentHomePage(),
-    const ParentBookingListPage(),
-    const DonationPage(),
-    const ParentProfileScreen(),
+    const CaregiverHomeScreen(),
+    const CaregiverBookingList(),
+    const AvailabilityScreen(),
+    const CaregiverProfileScreen(),
   ];
 
   @override
@@ -51,7 +51,7 @@ class _ParentAppState extends State<ParentApp> {
         ],
       ),
       body: _pages[_currentIndex],
-      bottomNavigationBar: ParentBottomNavBar(
+      bottomNavigationBar: CaregiverBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
       ),

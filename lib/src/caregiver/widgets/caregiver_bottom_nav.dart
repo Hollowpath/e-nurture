@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class ParentBottomNavBar extends StatelessWidget {
+class CaregiverBottomNav extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
 
-  const ParentBottomNavBar({
+  const CaregiverBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
@@ -30,8 +30,8 @@ class ParentBottomNavBar extends StatelessWidget {
             label: 'Bookings',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Donate',
+            icon: Icon(Icons.calendar_today),
+            label: 'Availabilities',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
