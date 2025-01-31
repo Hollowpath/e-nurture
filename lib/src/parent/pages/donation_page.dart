@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DonationPage extends StatelessWidget {
-  const DonationPage({Key? key}) : super(key: key);
+  const DonationPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +74,7 @@ class DonationPage extends StatelessWidget {
           fit: BoxFit.cover,
         ),
       ),
-      child: Center(
+      child: const Center(
         child: Text(
           'Support B40 Caregivers',
           style: TextStyle(
@@ -89,9 +89,9 @@ class DonationPage extends StatelessWidget {
 
   // Donation Purpose
   Widget _buildDonationPurpose() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Your Donation Makes a Difference',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -134,8 +134,8 @@ class DonationPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
-          children: const [
+        const Row(
+          children: [
             Checkbox(value: false, onChanged: null),
             Text('Make this a monthly donation'),
           ],
@@ -156,9 +156,9 @@ class DonationPage extends StatelessWidget {
 
   // Payment Methods
   Widget _buildPaymentMethods() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Payment Methods',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -186,7 +186,7 @@ class DonationPage extends StatelessWidget {
         LinearProgressIndicator(
           value: 0.5, // Example: 50% progress
           backgroundColor: Colors.grey[300],
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
         ),
         const SizedBox(height: 10),
         const Text('Raised: \$5,000 of \$10,000 goal'),
@@ -196,22 +196,22 @@ class DonationPage extends StatelessWidget {
 
   // Donor Recognition
   Widget _buildDonorRecognition() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Donor Recognition',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Row(
-          children: const [
+          children: [
             Checkbox(value: false, onChanged: null),
             Text('Donate anonymously'),
           ],
         ),
         Row(
-          children: const [
+          children: [
             Checkbox(value: false, onChanged: null),
             Text('Display my name on the donor wall'),
           ],
@@ -222,9 +222,9 @@ class DonationPage extends StatelessWidget {
 
   // Tax Deduction Information
   Widget _buildTaxDeductionInfo() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Tax Deduction',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -250,9 +250,9 @@ class DonationPage extends StatelessWidget {
 
   // Trust and Security
   Widget _buildTrustAndSecurity() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Trust & Security',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -287,9 +287,9 @@ class DonationPage extends StatelessWidget {
 
   // Contact Information
   Widget _buildContactInfo() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Contact Us',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

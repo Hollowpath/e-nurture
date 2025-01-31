@@ -12,7 +12,7 @@ class ParentCard extends StatelessWidget {
   final String image;
 
   const ParentCard({
-    Key? key,
+    super.key,
     required this.name,
     required this.age,
     required this.rating,
@@ -22,7 +22,7 @@ class ParentCard extends StatelessWidget {
     required this.availability,
     required this.distance,
     required this.image,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
