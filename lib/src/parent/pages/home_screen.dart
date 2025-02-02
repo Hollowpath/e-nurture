@@ -6,14 +6,14 @@ class ParentHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: const _ParentHomePage(),
+    return const Scaffold(
+      body: _ParentHomePage(),
       );
   }
 }
 
 class _ParentHomePage extends StatelessWidget {
-  const _ParentHomePage({Key? key}) : super(key: key);
+  const _ParentHomePage();
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +83,7 @@ class _ParentHomePage extends StatelessWidget {
         // Navigate to search page
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => SearchPage()),
+          MaterialPageRoute(builder: (context) => const SearchPage()),
         );
       },
       child: AbsorbPointer(
@@ -115,7 +115,7 @@ class _ParentHomePage extends StatelessWidget {
           fit: BoxFit.cover,
         ),
       ),
-      child: Center(
+      child: const Center(
         child: Text(
           'Support B40 Caregivers',
           style: TextStyle(
@@ -151,18 +151,18 @@ class _ParentHomePage extends StatelessWidget {
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Column(
+                child: const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       backgroundImage: AssetImage('assets/caregiver.jpg'), // Add caregiver image
                     ),
-                    const SizedBox(height: 10),
-                    const Text('Jane Doe'),
-                    const SizedBox(height: 5),
+                    SizedBox(height: 10),
+                    Text('Jane Doe'),
+                    SizedBox(height: 5),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.star, color: Colors.amber, size: 16),
                         Text('4.8'),
                       ],

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart'; // Add this package to your pubspec.yaml
 
 class AvailabilityScreen extends StatefulWidget {
-  const AvailabilityScreen({Key? key}) : super(key: key);
+  const AvailabilityScreen({super.key});
 
   @override
   _AvailabilityScreenState createState() => _AvailabilityScreenState();
@@ -12,7 +12,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.week;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  Map<DateTime, List<String>> _availabilityMap = {}; // Example: Stores availability slots
+  final Map<DateTime, List<String>> _availabilityMap = {}; // Example: Stores availability slots
   bool _isAvailable = true; // Toggle for availability status
 
   @override

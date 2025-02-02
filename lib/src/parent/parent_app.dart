@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'widgets/parent_bottom_nav.dart';
-import '../auth/login_page.dart';
+import '../auth/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'pages/booking_list_page.dart';
@@ -9,6 +9,8 @@ import 'pages/profile_scree.dart';
 import 'pages/donation_page.dart';
 
 class ParentApp extends StatefulWidget {
+  const ParentApp({super.key});
+
   @override
   _ParentAppState createState() => _ParentAppState();
   
@@ -21,7 +23,7 @@ class _ParentAppState extends State<ParentApp> {
     const ParentHomePage(),
     const ParentBookingListPage(),
     const DonationPage(),
-    ParentProfileScreen(),
+    const ParentProfileScreen(),
   ];
 
   @override
@@ -42,7 +44,7 @@ class _ParentAppState extends State<ParentApp> {
               await FirebaseAuth.instance.signOut();
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const LoginPage()),
+                MaterialPageRoute(builder: (context) => LoginScreen()),
               );
             },
           )

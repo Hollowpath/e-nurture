@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CaregiverBookingList extends StatelessWidget {
-  const CaregiverBookingList({Key? key}) : super(key: key);
+  const CaregiverBookingList({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({Key? key}) : super(key: key);
+  const SearchPage({super.key});
 
   @override
   _SearchPageState createState() => _SearchPageState();
@@ -28,7 +28,7 @@ class _SearchPageState extends State<SearchPage> {
         'rating': 4.5,
         'hourlyRate': 20,
         'certifications': ['CPR', 'First Aid'],
-        'experience': '5 years with toddlers',
+        'Service': '5 years with toddlers',
         'availability': 'Available Today',
         'distance': '2 miles away',
         'image': 'assets/caregiver1.jpg',
@@ -39,7 +39,7 @@ class _SearchPageState extends State<SearchPage> {
         'rating': 5.0,
         'hourlyRate': 25,
         'certifications': ['First Aid'],
-        'experience': '3 years with newborns',
+        'Service': '3 years with newborns',
         'availability': 'Available Tomorrow',
         'distance': '1 mile away',
         'image': 'assets/caregiver2.jpg',
@@ -182,7 +182,7 @@ class _SearchPageState extends State<SearchPage> {
             const SizedBox(height: 10),
             Text('\$${caregiver['hourlyRate']}/hour'),
             Text('Certifications: ${caregiver['certifications'].join(', ')}'),
-            Text('Experience: ${caregiver['experience']}'),
+            Text('Service: ${caregiver['service']}'),
             Text('Availability: ${caregiver['availability']}'),
             Text('Distance: ${caregiver['distance']}'),
             const SizedBox(height: 10),
@@ -250,7 +250,7 @@ class _SearchPageState extends State<SearchPage> {
               _buildFilterOption('Availability'),
               _buildFilterOption('Price Range'),
               _buildFilterOption('Certifications'),
-              _buildFilterOption('Experience'),
+              _buildFilterOption('Service'),
               _buildFilterOption('Ratings'),
               _buildFilterOption('Languages'),
               _buildFilterOption('Special Skills'),

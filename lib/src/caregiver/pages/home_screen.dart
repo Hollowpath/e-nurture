@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CaregiverHomeScreen extends StatelessWidget {
-  const CaregiverHomeScreen({Key? key}) : super(key: key);
+  const CaregiverHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +23,8 @@ class CaregiverHomeScreen extends StatelessWidget {
       },
     ];
 
-    final bool isAvailable = true; // Example availability status
-    final double weeklyEarnings = 200.0; // Example earnings
+    const bool isAvailable = true; // Example availability status
+    const double weeklyEarnings = 200.0; // Example earnings
 
     return Scaffold(
       appBar: AppBar(
@@ -87,9 +87,9 @@ class CaregiverHomeScreen extends StatelessWidget {
               radius: 30,
             ),
             const SizedBox(width: 10),
-            Column(
+            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Sarah, 36',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
