@@ -4,7 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'training_certification_page.dart';
 import 'package:image_picker/image_picker.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,7 +19,6 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _formKey = GlobalKey<FormState>();
-
   File? _profileImage;
   Map<String, dynamic> _userData = {};
   List<String> _certifications = [];
@@ -213,8 +214,8 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Widget for the Certifications and Training section.
-  Widget _buildCertifications() {
+  // Certifications and Training Widget
+  Widget _buildCertifications(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -239,10 +240,15 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             ElevatedButton(
-              onPressed: _addCertification,
-              child: const Text('Add New Certification'),
+              onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TrainingCertificationPage()),
+              );
+              },
+              child: const Text('Upload New Certification'),
             ),
-          ],
+            ],
         ),
       ),
     );
@@ -472,6 +478,8 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildProfilePicture(),
+              const SizedBox(height: 20),
+              _buildCertifications(context),
               const SizedBox(height: 20),
               _buildPersonalInformation(),
               const SizedBox(height: 20),
