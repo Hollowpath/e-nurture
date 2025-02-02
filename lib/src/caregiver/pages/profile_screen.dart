@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'training_certification_page.dart';
 
 class CaregiverProfileScreen extends StatelessWidget {
   const CaregiverProfileScreen({super.key});
@@ -23,7 +24,7 @@ class CaregiverProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Certifications and Training
-            _buildCertifications(),
+            _buildCertifications(context),
             const SizedBox(height: 20),
 
             // Availability
@@ -127,7 +128,7 @@ class CaregiverProfileScreen extends StatelessWidget {
   }
 
   // Certifications and Training Widget
-  Widget _buildCertifications() {
+  Widget _buildCertifications(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -149,11 +150,14 @@ class CaregiverProfileScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                // Handle upload new certification
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TrainingCertificationPage()),
+              );
               },
               child: const Text('Upload New Certification'),
             ),
-          ],
+            ],
         ),
       ),
     );
