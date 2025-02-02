@@ -6,7 +6,7 @@ class ParentCard extends StatelessWidget {
   final double rating;
   final int hourlyRate;
   final List<String> certifications;
-  final String experience;
+  final String service;
   final String availability;
   final String distance;
   final String image;
@@ -18,7 +18,7 @@ class ParentCard extends StatelessWidget {
     required this.rating,
     required this.hourlyRate,
     required this.certifications,
-    required this.experience,
+    required this.service,
     required this.availability,
     required this.distance,
     required this.image,
@@ -65,8 +65,8 @@ class ParentCard extends StatelessWidget {
             Text('\$$hourlyRate/hour'),
             // Certifications
             Text('Certifications: ${certifications.join(', ')}'),
-            // Experience
-            Text('Experience: $experience'),
+            // Service
+            Text('Service: $service'),
             // Availability
             Text('Availability: $availability'),
             // Distance
