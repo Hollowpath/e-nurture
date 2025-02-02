@@ -23,7 +23,7 @@ class _CaregiverAppState extends State<CaregiverApp> {
     const CaregiverHomeScreen(),
     const CaregiverBookingList(),
     const AvailabilityScreen(),
-    const CaregiverProfileScreen(),
+    ProfileScreen(),
   ];
 
   @override
