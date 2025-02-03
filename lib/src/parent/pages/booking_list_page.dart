@@ -6,10 +6,10 @@ class ParentBookingListPage extends StatefulWidget {
   const ParentBookingListPage({super.key});
 
   @override
-  _BookingListPageState createState() => _BookingListPageState();
+  BookingListPageState createState() => BookingListPageState();
 }
 
-class _BookingListPageState extends State<ParentBookingListPage> {
+class BookingListPageState extends State<ParentBookingListPage> {
   String _selectedFilter = 'All'; // Filter option (if needed later)
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -58,18 +58,18 @@ class _BookingListPageState extends State<ParentBookingListPage> {
 
   // Empty state widget in case there are no matching caregivers.
   Widget _buildEmptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.search_off, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
+          Icon(Icons.search_off, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
             'No caregivers found.',
             style: TextStyle(fontSize: 18, color: Colors.grey),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text(
             'Try adjusting your search.',
             style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
@@ -159,7 +159,7 @@ class _BookingListPageState extends State<ParentBookingListPage> {
                       name: data['name'] ?? 'Unnamed',
                       age: data['age'] ?? 0,
                       rating: data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0,
-                      hourlyRate: data['rate'] ?? 20,
+                      hourlyRate: data['rate'] != null ? (data['rate'] as num).toInt() : 20,
                       certifications: data['certifications'] != null
                           ? List<String>.from(data['certifications'])
                           : const ['Failure', 'SkibidiRizz'],

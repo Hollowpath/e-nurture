@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart'; // Add this package to your pubspec.yaml
+// import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TrainingCertificationPage extends StatefulWidget {
   const TrainingCertificationPage({super.key});
@@ -10,8 +11,34 @@ class TrainingCertificationPage extends StatefulWidget {
 }
 
 class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
-  final List<String> _certifications = []; // List of certifications
+  final List<Map<String, String>> _certifications = []; // List of certifications
   final double _trainingProgress = 0.5; // Example training progress (50%)
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCertifications();
+  }
+
+  Future<void> _loadCertifications() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance.collection('certifications').get();
+      final certifications = querySnapshot.docs.map((doc) {
+        return {
+          'name': doc['name'],
+          'file': doc['fileUrl'],
+        };
+      }).toList();
+
+      setState(() {
+        _certifications.addAll(certifications.map((cert) => cert.map((key, value) => MapEntry(key, value.toString()))));
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load certifications: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +119,15 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
               Column(
                 children: _certifications
                     .map((certification) => ListTile(
-                          title: Text(certification),
+                          title: Text(certification['name']!),
+                          subtitle: certification['file']!.startsWith('http')
+                              ? Image.network(
+                                  certification['file']!,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Text('Invalid Image Data');
+                                  },
+                                )
+                              : Text(certification['file']!),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () => _deleteCertification(certification),
@@ -108,30 +143,83 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
 
   // Upload Certification
   void _uploadCertification() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'png'],
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController urlController = TextEditingController();
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Upload Certification'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Certification Name'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(labelText: 'Certification URL'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop({
+                  'name': nameController.text,
+                  'file': urlController.text,
+                });
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        );
+      },
     );
 
-    if (result != null) {
-      final file = result.files.single;
+    if (result != null && result['name']!.isNotEmpty && result['file']!.isNotEmpty) {
+      await _uploadCertificationToFirebase(context, result['name']!, result['file']!);
       setState(() {
-        _certifications.add(file.name);
+        _certifications.add({
+          'name': result['name']!,
+          'file': result['file']!, // Display the URL
+        });
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${file.name} uploaded successfully!')),
-      );
     }
   }
 
   // Delete Certification
-  void _deleteCertification(String certification) {
-    setState(() {
-      _certifications.remove(certification);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$certification deleted.')),
-    );
+  void _deleteCertification(Map<String, String> certification) async {
+    try {
+      // Delete from Firestore (assuming you have the document ID)
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('certifications')
+          .where('name', isEqualTo: certification['name'])
+          .get();
+      for (final doc in querySnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      setState(() {
+        _certifications.remove(certification);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${certification['name']} deleted.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete certification: $e')),
+      );
+    }
   }
 
   // Training Materials Widget
@@ -171,6 +259,24 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+Future<void> _uploadCertificationToFirebase(BuildContext context, String name, String fileUrl) async {
+  try {
+    // Save certification info to Firestore
+    await FirebaseFirestore.instance.collection('certifications').add({
+      'name': name,
+      'fileUrl': fileUrl,
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$name uploaded successfully!')),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to upload certification: $e')),
     );
   }
 }
