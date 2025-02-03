@@ -4,23 +4,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'training_certification_page.dart';
 import 'package:image_picker/image_picker.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+
+class CaregiverProfileScreen extends StatefulWidget {
+  const CaregiverProfileScreen({super.key});
 
   @override
-  _MergedProfileScreenState createState() => _MergedProfileScreenState();
+  _CaregiverProfileScreen createState() => _CaregiverProfileScreen();
 }
 
-class _MergedProfileScreenState extends State<ProfileScreen> {
+class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _formKey = GlobalKey<FormState>();
-
   File? _profileImage;
   Map<String, dynamic> _userData = {};
-  List<String> _certifications = [];
+  final List<String> _certifications = [];
   final TextEditingController _certificationController = TextEditingController();
 
   // Field controllers for editable information
@@ -51,8 +52,8 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
           _bioController.text = _userData['bio'] ?? '';
           _rateController.text = _userData['rate']?.toString() ?? '';
           _serviceController.text = _userData['service'] ?? '';
-          _certifications =
-              List<String>.from(_userData['certifications'] ?? []);
+          // _certifications =
+          //     List<String>.from(_userData['certifications'] ?? []);
         });
       }
     }
@@ -83,7 +84,7 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
           'bio': _bioController.text,
           'rate': double.tryParse(_rateController.text) ?? 0.0,
           'service': _serviceController.text,
-          'certifications': _certifications,
+          // 'certifications': _certifications,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -213,8 +214,8 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Widget for the Certifications and Training section.
-  Widget _buildCertifications() {
+  // Certifications and Training Widget
+  Widget _buildCertifications(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -239,10 +240,15 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             ElevatedButton(
-              onPressed: _addCertification,
-              child: const Text('Add New Certification'),
+              onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TrainingCertificationPage()),
+              );
+              },
+              child: const Text('Upload New Certification'),
             ),
-          ],
+            ],
         ),
       ),
     );
@@ -475,7 +481,7 @@ class _MergedProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 20),
               _buildPersonalInformation(),
               const SizedBox(height: 20),
-              _buildCertifications(),
+              _buildCertifications(context),
               const SizedBox(height: 20),
               _buildAvailability(),
               const SizedBox(height: 20),

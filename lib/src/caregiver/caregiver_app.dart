@@ -23,7 +23,7 @@ class _CaregiverAppState extends State<CaregiverApp> {
     const CaregiverHomeScreen(),
     const CaregiverBookingList(),
     const AvailabilityScreen(),
-    ProfileScreen(),
+    const CaregiverProfileScreen(),
   ];
 
   @override
@@ -44,7 +44,7 @@ class _CaregiverAppState extends State<CaregiverApp> {
               await FirebaseAuth.instance.signOut();
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => LoginScreen()),
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
             },
           )
