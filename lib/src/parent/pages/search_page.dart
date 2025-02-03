@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen here
 import 'package:geolocator/geolocator.dart'; // Import geolocator for getting current location
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -16,6 +16,12 @@ class _SearchPageState extends State<SearchPage> {
   String _selectedFilter = 'Relevance'; // Default sort option
   List<Map<String, dynamic>> _searchResults = []; // This will be populated from Firestore
 
+  // Store the user's current position
+  Position? _currentPosition;
+
+  // Use ValueNotifier for better state management
+  final ValueNotifier<List<Map<String, dynamic>>> _searchNotifier = ValueNotifier([]);
+
   @override
   void initState() {
     super.initState();
@@ -23,10 +29,13 @@ class _SearchPageState extends State<SearchPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
     });
+
+    // Get the user's current location
+    _getCurrentLocation();
   }
 
   // Get current location
-  Future<Position> _getCurrentLocation() async {
+  Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
 
@@ -45,7 +54,8 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     // Get the current position
-    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    _currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    setState(() {}); // Update the UI with the new position
   }
 
   // Fetch caregivers data from Firestore
@@ -65,11 +75,43 @@ class _SearchPageState extends State<SearchPage> {
             'phone': doc['phone'],
             'rate': doc['rate'],
             'service': doc['service'] ?? '',
-            'address': doc['address'] ?? '',  // Include the address field
+            'address': doc['address'] ?? '',
             'role': doc['role'],
           };
         }).toList();
       });
+  }
+
+  // Calculate distance between the current location and the caregiver
+  double _calculateDistance(double lat, double lon) {
+    if (_currentPosition == null) return double.infinity;
+
+    return Geolocator.distanceBetween(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+      lat,
+      lon,
+    );
+  }
+
+  // Sort search results by proximity or other selected filter
+  void _sortSearchResults(List<Map<String, dynamic>> results) {
+    if (_selectedFilter == 'Distance' && _currentPosition != null) {
+      results.sort((a, b) {
+        double distanceA = _calculateDistance(a['latitude'], a['longitude']);
+        double distanceB = _calculateDistance(b['latitude'], b['longitude']);
+        return distanceA.compareTo(distanceB);
+      });
+    }
+    // Reset sorting for other filters
+    else if (_selectedFilter == 'Relevance') {
+      // You can implement your custom sorting logic for "Relevance"
+      results.sort((a, b) => a['name'].compareTo(b['name'])); // Just an example, sorting by name
+    }
+    // Add sorting for other filters like "Rating", "Price", etc., here
+
+    // Update the notifier to trigger a rebuild
+    _searchNotifier.value = results;
   }
 
   @override
@@ -94,7 +136,7 @@ class _SearchPageState extends State<SearchPage> {
                 ),
               ),
               onChanged: (value) {
-                // You can filter search results here as the user types
+                // Filter search results as the user types
               },
             ),
           ),
@@ -157,16 +199,24 @@ class _SearchPageState extends State<SearchPage> {
 
                 final searchResults = snapshot.data ?? [];
 
-                return searchResults.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: searchResults.length,
-                        itemBuilder: (context, index) {
-                          final caregiver = searchResults[index];
-                          return _buildCaregiverCard(caregiver);
-                        },
-                      );
+                // Sort the results based on selected filter
+                _sortSearchResults(searchResults);
+
+                return ValueListenableBuilder<List<Map<String, dynamic>>>(
+                  valueListenable: _searchNotifier,
+                  builder: (context, updatedResults, child) {
+                    return updatedResults.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: updatedResults.length,
+                            itemBuilder: (context, index) {
+                              final caregiver = updatedResults[index];
+                              return _buildCaregiverCard(caregiver);
+                            },
+                          );
+                  },
+                );
               },
             ),
           ),
