@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen here
 import 'package:geolocator/geolocator.dart'; // Import geolocator for getting current location
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -13,7 +14,7 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _selectedFilter = 'Relevance'; // Default sort option
-  List<Map<String, dynamic>> _searchResults = []; // Example search results
+  List<Map<String, dynamic>> _searchResults = []; // This will be populated from Firestore
 
   @override
   void initState() {
@@ -22,48 +23,6 @@ class _SearchPageState extends State<SearchPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
     });
-    // Example data for search results
-    _searchResults = [
-      {
-        'name': 'Atiqah',
-        'age': 32,
-        'rating': 5.0,
-        'hourlyRate': 25,
-        'certifications': ['First Aid'],
-        'service': '3 years with newborns',
-        'availability': 'Available Tomorrow',
-        'distance': '4 miles away',
-        'image': 'assets/caregiver2.jpg',
-        'latitude': 3.1971901241624305,  // Add latitude
-        'longitude':  101.73444153683393,  // Add longitude
-      },
-      {
-        'name': 'Sarah',
-        'age': 36,
-        'rating': 4.5,
-        'hourlyRate': 20,
-        'certifications': ['CPR', 'First Aid'],
-        'service': '5 years with toddlers',
-        'availability': 'Available Today',
-        'distance': '2 miles away',
-        'image': 'assets/caregiver1.jpg',
-        'latitude': 3.227522695048218,  // Add latitude
-        'longitude':  101.72566637963965,  // Add longitude
-      },
-      {
-        'name': 'John',
-        'age': 28,
-        'rating': 5.0,
-        'hourlyRate': 25,
-        'certifications': ['First Aid'],
-        'service': '3 years with newborns',
-        'availability': 'Available Tomorrow',
-        'distance': '1 mile away',
-        'image': 'assets/caregiver2.jpg',
-        'latitude': 3.2317263893115546,  // Add latitude
-        'longitude': 101.70450631492854,  // Add longitude
-      },
-    ];
   }
 
   // Get current location
@@ -89,6 +48,30 @@ class _SearchPageState extends State<SearchPage> {
     return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
   }
 
+  // Fetch caregivers data from Firestore
+  Stream<List<Map<String, dynamic>>> _fetchCaregivers() {
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    return _firestore.collection('users')
+      .where('role', isEqualTo: 'Childcare Giver') // Filter for Childcare Giver role
+      .snapshots()
+      .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return {
+            'name': doc['name'],
+            'age': doc['age'],
+            'bio': doc['bio'],
+            'latitude': doc['latitude'],
+            'longitude': doc['longitude'],
+            'phone': doc['phone'],
+            'rate': doc['rate'],
+            'service': doc['service'] ?? '',
+            'address': doc['address'] ?? '',  // Include the address field
+            'role': doc['role'],
+          };
+        }).toList();
+      });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -111,15 +94,7 @@ class _SearchPageState extends State<SearchPage> {
                 ),
               ),
               onChanged: (value) {
-                // Perform search as the user types
-                setState(() {
-                  _searchResults = _searchResults
-                      .where((caregiver) => caregiver['name']
-                          .toLowerCase()
-                          .contains(value.toLowerCase()))
-                      .toList();
-                });
-                _sortSearchResults();  // Sort after the search is performed
+                // You can filter search results here as the user types
               },
             ),
           ),
@@ -159,7 +134,6 @@ class _SearchPageState extends State<SearchPage> {
                     onChanged: (value) {
                       setState(() {
                         _selectedFilter = value!;
-                        _sortSearchResults(); // Sort after changing filter
                       });
                     },
                   ),
@@ -170,16 +144,31 @@ class _SearchPageState extends State<SearchPage> {
           const SizedBox(height: 10),
           // Search Results
           Expanded(
-            child: _searchResults.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _searchResults.length,
-                    itemBuilder: (context, index) {
-                      final caregiver = _searchResults[index];
-                      return _buildCaregiverCard(caregiver);
-                    },
-                  ),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _fetchCaregivers(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final searchResults = snapshot.data ?? [];
+
+                return searchResults.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: searchResults.length,
+                        itemBuilder: (context, index) {
+                          final caregiver = searchResults[index];
+                          return _buildCaregiverCard(caregiver);
+                        },
+                      );
+              },
+            ),
           ),
         ],
       ),
@@ -198,7 +187,7 @@ class _SearchPageState extends State<SearchPage> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: AssetImage(caregiver['image']),
+                  backgroundImage: AssetImage(caregiver['image'] ?? 'assets/default_image.jpg'),
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -214,7 +203,7 @@ class _SearchPageState extends State<SearchPage> {
                     Row(
                       children: [
                         const Icon(Icons.star, color: Colors.amber, size: 16),
-                        Text('${caregiver['rating']}'),
+                        Text('${caregiver['rate']}'),
                       ],
                     ),
                   ],
@@ -222,11 +211,9 @@ class _SearchPageState extends State<SearchPage> {
               ],
             ),
             const SizedBox(height: 10),
-            Text('\$${caregiver['hourlyRate']}/hour'),
-            Text('Certifications: ${caregiver['certifications'].join(', ')}'),
+            Text('Phone: ${caregiver['phone']}'),
             Text('Service: ${caregiver['service']}'),
-            Text('Availability: ${caregiver['availability']}'),
-            Text('Distance: ${caregiver['distance']}'),
+            Text('Address: ${caregiver['address']}'),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -339,30 +326,5 @@ class _SearchPageState extends State<SearchPage> {
         // Navigate to filter-specific screen
       },
     );
-  }
-
-  // Sort Search Results based on location
-  Future<void> _sortSearchResults() async {
-    // Get current location
-    Position currentPosition = await _getCurrentLocation();
-
-    // Calculate the distance for each caregiver and store it in a temporary field
-    for (var caregiver in _searchResults) {
-      double distanceInMeters = Geolocator.distanceBetween(
-        currentPosition.latitude,
-        currentPosition.longitude,
-        caregiver['latitude'],
-        caregiver['longitude'],
-      );
-      caregiver['distanceInMeters'] = distanceInMeters;
-    }
-
-    // Sort the search results based on distance (ascending order)
-    _searchResults.sort((a, b) {
-      return a['distanceInMeters'].compareTo(b['distanceInMeters']);
-    });
-
-    // Trigger UI update by calling setState after sorting
-    setState(() {});
   }
 }
