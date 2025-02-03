@@ -57,7 +57,20 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
         });
       }
     }
+        await _firestore.collection('users').doc(user!.uid).set({
+          'role': 'Childcare Giver',
+          'caregiverID': user.uid,
+          'name': _nameController.text,
+          'age': int.tryParse(_ageController.text) ?? 0,
+          'phone': _phoneController.text,
+          'bio': _bioController.text,
+          'rate': double.tryParse(_rateController.text) ?? 0.0,
+          'service': _serviceController.text,
+          // 'certifications': _certifications,
+        });
+
   }
+  
 
   Future<void> _updateProfile() async {
     if (_formKey.currentState?.validate() ?? false) {
@@ -78,6 +91,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
         // Update other fields
         await _firestore.collection('users').doc(user.uid).set({
           'role': 'Childcare Giver',
+          'caregiverID': user.uid,
           'name': _nameController.text,
           'age': int.tryParse(_ageController.text) ?? 0,
           'phone': _phoneController.text,
