@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../widgets/parent_card.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ParentBookingListPage extends StatefulWidget {
   const ParentBookingListPage({super.key});
@@ -9,19 +10,34 @@ class ParentBookingListPage extends StatefulWidget {
   BookingListPageState createState() => BookingListPageState();
 }
 
-class BookingListPageState extends State<ParentBookingListPage> {
-  String _selectedFilter = 'All'; // Filter option (if needed later)
+class BookingListPageState extends State<ParentBookingListPage> with SingleTickerProviderStateMixin {
+  String _selectedFilter = 'All'; // Filter option for booked caregivers
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  final user = FirebaseAuth.instance.currentUser;
+  late TabController _tabController;
 
-  // Update search query when text changes.
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _tabController.dispose();
+    super.dispose();
+  }
+
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text;
     });
   }
 
-  // Show filter options dialog (if you wish to add additional filtering later)
   void _showFilterOptions() {
     showDialog(
       context: context,
@@ -32,8 +48,8 @@ class BookingListPageState extends State<ParentBookingListPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildFilterOption('All'),
-              _buildFilterOption('Upcoming'),
-              _buildFilterOption('Completed'),
+              _buildFilterOption('Pending'),
+              _buildFilterOption('Accepted'),
               _buildFilterOption('Canceled'),
             ],
           ),
@@ -42,7 +58,6 @@ class BookingListPageState extends State<ParentBookingListPage> {
     );
   }
 
-  // Filter option widget.
   Widget _buildFilterOption(String filter) {
     return ListTile(
       title: Text(filter),
@@ -56,22 +71,16 @@ class BookingListPageState extends State<ParentBookingListPage> {
     );
   }
 
-  // Empty state widget in case there are no matching caregivers.
-  Widget _buildEmptyState() {
-    return const Center(
+  Widget _buildEmptyState(String message) {
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
+          const Icon(Icons.search_off, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
           Text(
-            'No caregivers found.',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Try adjusting your search.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            message,
+            style: const TextStyle(fontSize: 18, color: Colors.grey),
           ),
         ],
       ),
@@ -79,29 +88,17 @@ class BookingListPageState extends State<ParentBookingListPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(_onSearchChanged);
-  }
-
-  @override
-  void dispose() {
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Stream of users with role "Childcare Giver"
-    final Stream<QuerySnapshot<Map<String, dynamic>>> caregiverStream = FirebaseFirestore.instance
-        .collection('users')
-        .where('role', isEqualTo: "Childcare Giver")
-        .snapshots();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking List'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Search List'),
+            Tab(text: 'Booked List'),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -125,63 +122,151 @@ class BookingListPageState extends State<ParentBookingListPage> {
               ),
             ),
           ),
-          // Booking/Caregiver List via StreamBuilder
           Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: caregiverStream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                final docs = snapshot.data?.docs ?? [];
-
-                // Filter caregivers based on the search query
-                final filteredDocs = docs.where((doc) {
-                  final name = (doc.data()['name'] ?? '').toString().toLowerCase();
-                  return name.contains(_searchQuery.toLowerCase());
-                }).toList();
-
-                if (filteredDocs.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filteredDocs.length,
-                  itemBuilder: (context, index) {
-                    final data = filteredDocs[index].data();
-                    return ParentCard(
-                      // Map the Firestore fields to the ParentCard widget.
-                      // Replace these with your actual field names.
-                      name: data['name'] ?? 'Unnamed',
-                      age: data['age'] ?? 0,
-                      rating: data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0,
-                      hourlyRate: data['rate'] != null ? (data['rate'] as num).toInt() : 20,
-                      certifications: data['certifications'] != null
-                          ? List<String>.from(data['certifications'])
-                          : const ['Failure', 'SkibidiRizz'],
-                      service: data['service'] ?? 'N/A',
-                      availability: data['availability'] ?? 'N/A',
-                      distance: data['distance'] ?? 'N/A',
-                      image: data['profileImageUrl'] ?? 'assets/images/caregiver.png',
-                    );
-                  },
-                );
-              },
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Search List Tab
+                _buildSearchList(),
+                // Booked List Tab
+                _buildBookedList(),
+              ],
             ),
           ),
         ],
       ),
-      // Call-to-Action Button for New Bookings (if needed)
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Navigate to booking screen or caregiver details.
         },
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget _buildSearchList() {
+    final Stream<QuerySnapshot<Map<String, dynamic>>> caregiverStream = FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: "Childcare Giver")
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: caregiverStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final docs = snapshot.data?.docs ?? [];
+
+        // Filter caregivers based on the search query
+        final filteredDocs = docs.where((doc) {
+          final name = (doc.data()['name'] ?? '').toString().toLowerCase();
+          return name.contains(_searchQuery.toLowerCase());
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
+          return _buildEmptyState('No caregivers found.');
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: filteredDocs.length,
+          itemBuilder: (context, index) {
+            final data = filteredDocs[index].data();
+            return ParentCard(
+              caregiverId: data['caregiverID'] ?? 'Unnamed',
+              name: data['name'] ?? 'Unnamed',
+              age: data['age'] ?? 0,
+              rating: data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0,
+              hourlyRate: data['rate'] != null ? (data['rate'] as num).toInt() : 20,
+              certifications: data['certifications'] != null
+                  ? List<String>.from(data['certifications'])
+                  : const ['None'],
+              service: data['service'] ?? 'N/A',
+              availability: data['availability'] ?? 'N/A',
+              distance: data['distance'] ?? 'N/A',
+              image: data['profileImageUrl'] ?? 'assets/images/caregiver.png',
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildBookedList() {
+    final Stream<QuerySnapshot<Map<String, dynamic>>> bookedCaregiverStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user?.uid)
+        .collection('bookings')
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: bookedCaregiverStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final docs = snapshot.data?.docs ?? [];
+
+        // Filter bookings based on the selected filter
+        final filteredDocs = docs.where((doc) {
+          final status = doc.data()['status'] ?? '';
+          return _selectedFilter == 'All' || status == _selectedFilter;
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
+          return _buildEmptyState('No bookings found.');
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: filteredDocs.length,
+          itemBuilder: (context, index) {
+            final booking = filteredDocs[index].data();
+            return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(booking['caregiverID'])
+                  .get(),
+              builder: (context, caregiverSnapshot) {
+                if (caregiverSnapshot.connectionState == ConnectionState.waiting) {
+                  return const ListTile(
+                    title: Text('Loading...'),
+                  );
+                }
+                if (caregiverSnapshot.hasError || !caregiverSnapshot.hasData) {
+                  return const ListTile(
+                    title: Text('Error loading caregiver details.'),
+                  );
+                }
+
+                final caregiver = caregiverSnapshot.data!.data()!;
+                return ParentCard(
+                  caregiverId: caregiver['caregiverID'] ?? 'Unnamed',
+                  name: caregiver['name'] ?? 'Unnamed',
+                  age: caregiver['age'] ?? 0,
+                  rating: caregiver['rating'] != null ? (caregiver['rating'] as num).toDouble() : 0.0,
+                  hourlyRate: caregiver['rate'] != null ? (caregiver['rate'] as num).toInt() : 20,
+                  certifications: caregiver['certifications'] != null
+                      ? List<String>.from(caregiver['certifications'])
+                      : const ['None'],
+                  service: caregiver['service'] ?? 'N/A',
+                  availability: caregiver['availability'] ?? 'N/A',
+                  distance: caregiver['distance'] ?? 'N/A',
+                  image: caregiver['profileImageUrl'] ?? 'assets/images/caregiver.png',
+                  isBooked: true, // Set this to true for Booked List
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

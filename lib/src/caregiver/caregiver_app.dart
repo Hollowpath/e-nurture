@@ -31,24 +31,7 @@ class _CaregiverAppState extends State<CaregiverApp> {
     return Scaffold(
             appBar: AppBar(
         title: const Text('E-Nurture Home'),
-        actions: [
-          IconButton(
-            icon: const Row(
-              children: [
-              Icon(Icons.logout),
-              SizedBox(width: 5),
-              Text('Logout'),
-              ],
-            ),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            },
-          )
-        ],
+        actions: [],
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: CaregiverBottomNav(

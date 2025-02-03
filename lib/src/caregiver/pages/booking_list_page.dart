@@ -1,51 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/caregiver_card.dart';
 
 class CaregiverBookingList extends StatelessWidget {
   const CaregiverBookingList({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Example data for bookings
-    final List<Map<String, dynamic>> upcomingBookings = [
-      {
-        'date': 'Oct 15, 2023',
-        'time': '9:00 AM - 1:00 PM',
-        'parentName': 'John',
-        'children': 2,
-        'location': 'At Home',
-        'status': 'Upcoming',
-      },
-      {
-        'date': 'Oct 16, 2023',
-        'time': '2:00 PM - 6:00 PM',
-        'parentName': 'Sarah',
-        'children': 1,
-        'location': 'Office',
-        'status': 'Upcoming',
-      },
-    ];
-
-    final List<Map<String, dynamic>> completedBookings = [
-      {
-        'date': 'Oct 10, 2023',
-        'time': '9:00 AM - 1:00 PM',
-        'parentName': 'Mike',
-        'children': 3,
-        'location': 'At Home',
-        'status': 'Completed',
-      },
-    ];
-
-    final List<Map<String, dynamic>> cancelledBookings = [
-      {
-        'date': 'Oct 5, 2023',
-        'time': '9:00 AM - 1:00 PM',
-        'parentName': 'Anna',
-        'children': 2,
-        'location': 'At Home',
-        'status': 'Cancelled',
-      },
-    ];
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('You must be logged in to view bookings.'),
+        ),
+      );
+    }
 
     return DefaultTabController(
       length: 3,
@@ -54,105 +24,118 @@ class CaregiverBookingList extends StatelessWidget {
           title: const Text('Bookings'),
           bottom: const TabBar(
             tabs: [
-              Tab(text: 'Upcoming'),
-              Tab(text: 'Completed'),
+              Tab(text: 'Pending'),
+              Tab(text: 'Accepted'),
               Tab(text: 'Cancelled'),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            // Upcoming Bookings
-            _buildBookingList(upcomingBookings),
-            // Completed Bookings
-            _buildBookingList(completedBookings),
+            // Pending Bookings
+            _buildBookingList(user.uid, 'Pending'),
+            // Accepted Bookings
+            _buildBookingList(user.uid, 'Accepted'),
             // Cancelled Bookings
-            _buildBookingList(cancelledBookings),
+            _buildBookingList(user.uid, 'Cancelled'),
           ],
         ),
       ),
     );
   }
 
-  // Booking List Widget
-  Widget _buildBookingList(List<Map<String, dynamic>> bookings) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: bookings.length,
-      itemBuilder: (context, index) {
-        final booking = bookings[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${booking['date']}, ${booking['time']}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text('Parent: ${booking['parentName']}'),
-                Text('Children: ${booking['children']}'),
-                Text('Location: ${booking['location']}'),
-                Text(
-                  'Status: ${booking['status']}',
-                  style: TextStyle(
-                    color: booking['status'] == 'Upcoming'
-                        ? Colors.blue
-                        : booking['status'] == 'Completed'
-                            ? Colors.green
-                            : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    if (booking['status'] == 'Upcoming')
-                      ElevatedButton(
-                        onPressed: () {
-                          // Handle reschedule
-                        },
-                        child: const Text('Reschedule'),
-                      ),
-                    if (booking['status'] == 'Upcoming')
-                      const SizedBox(width: 10),
-                    if (booking['status'] == 'Upcoming')
-                      ElevatedButton(
-                        onPressed: () {
-                          // Handle cancel
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                        child: const Text('Cancel'),
-                      ),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Navigate to booking details
-                      },
-                      child: const Text('View Details'),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Navigate to message parent
-                      },
-                      child: const Text('Message Parent'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+  Widget _buildBookingList(String caregiverId, String status) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(caregiverId)
+          .collection('pendingBookings')
+          .where('status', isEqualTo: status)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No bookings found.'));
+        }
+
+        final bookings = snapshot.data!.docs;
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: bookings.length,
+          itemBuilder: (context, index) {
+            final booking = bookings[index].data() as Map<String, dynamic>;
+            final parentId = booking['parentID'];
+            final bookingId = bookings[index].id;
+
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(parentId)
+                  .get(),
+              builder: (context, parentSnapshot) {
+                if (parentSnapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                if (parentSnapshot.hasError || !parentSnapshot.hasData) {
+                  return const Text('Error loading parent details.');
+                }
+
+                final parent = parentSnapshot.data!.data() as Map<String, dynamic>;
+
+                return CaregiverCard(
+                  date: booking['selectedDays'].join(', '),
+                  time: '${booking['startTime']} - ${booking['endTime']}',
+                  parentName: parent['name'] ?? 'Unknown',
+                  children: booking['childQuantity'],
+                  location: booking['location'],
+                  status: booking['status'],
+                  onAccept: () => _updateBookingStatus(bookingId, caregiverId, 'Accepted'),
+                  onReject: () => _updateBookingStatus(bookingId, caregiverId, 'Cancelled'),
+                  onViewDetails: () {
+                    // Navigate to booking details
+                  },
+                  onMessageParent: () {
+                    // Navigate to message parent
+                  },
+                );
+              },
+            );
+          },
         );
       },
     );
+  }
+
+  Future<void> _updateBookingStatus(String bookingId, String caregiverId, String status) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(caregiverId)
+        .collection('pendingBookings')
+        .doc(bookingId)
+        .update({'status': status});
+
+    // Optionally, update the parent's bookings collection
+    final bookingSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(caregiverId)
+        .collection('pendingBookings')
+        .doc(bookingId)
+        .get();
+
+    final parentId = bookingSnapshot.data()?['parentID'];
+    if (parentId != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(parentId)
+          .collection('bookings')
+          .doc(bookingId)
+          .update({'status': status});
+    }
   }
 }
