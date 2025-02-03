@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:e_nurture/testmodule/map_screen.dart'; // Import the MapScreen here
+import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen here
+import 'package:geolocator/geolocator.dart'; // Import geolocator for getting current location
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -23,33 +24,69 @@ class _SearchPageState extends State<SearchPage> {
     });
     // Example data for search results
     _searchResults = [
-  {
-    'name': 'Sarah',
-    'age': 36,
-    'rating': 4.5,
-    'hourlyRate': 20,
-    'certifications': ['CPR', 'First Aid'],
-    'service': '5 years with toddlers',
-    'availability': 'Available Today',
-    'distance': '2 miles away',
-    'image': 'assets/caregiver1.jpg',
-    'latitude': 3.227522695048218,  // Add latitude
-    'longitude':  101.72566637963965,  // Add longitude
-  },
-  {
-    'name': 'John',
-    'age': 28,
-    'rating': 5.0,
-    'hourlyRate': 25,
-    'certifications': ['First Aid'],
-    'service': '3 years with newborns',
-    'availability': 'Available Tomorrow',
-    'distance': '1 mile away',
-    'image': 'assets/caregiver2.jpg',
-    'latitude': 3.2317263893115546,  // Add latitude
-    'longitude': 101.70450631492854,  // Add longitude
-  },
-  ];
+      {
+        'name': 'Atiqah',
+        'age': 32,
+        'rating': 5.0,
+        'hourlyRate': 25,
+        'certifications': ['First Aid'],
+        'service': '3 years with newborns',
+        'availability': 'Available Tomorrow',
+        'distance': '4 miles away',
+        'image': 'assets/caregiver2.jpg',
+        'latitude': 3.1971901241624305,  // Add latitude
+        'longitude':  101.73444153683393,  // Add longitude
+      },
+      {
+        'name': 'Sarah',
+        'age': 36,
+        'rating': 4.5,
+        'hourlyRate': 20,
+        'certifications': ['CPR', 'First Aid'],
+        'service': '5 years with toddlers',
+        'availability': 'Available Today',
+        'distance': '2 miles away',
+        'image': 'assets/caregiver1.jpg',
+        'latitude': 3.227522695048218,  // Add latitude
+        'longitude':  101.72566637963965,  // Add longitude
+      },
+      {
+        'name': 'John',
+        'age': 28,
+        'rating': 5.0,
+        'hourlyRate': 25,
+        'certifications': ['First Aid'],
+        'service': '3 years with newborns',
+        'availability': 'Available Tomorrow',
+        'distance': '1 mile away',
+        'image': 'assets/caregiver2.jpg',
+        'latitude': 3.2317263893115546,  // Add latitude
+        'longitude': 101.70450631492854,  // Add longitude
+      },
+    ];
+  }
+
+  // Get current location
+  Future<Position> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    // Check for location permissions
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      return Future.error('Location permission denied');
+    } else if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permission permanently denied');
+    }
+
+    // Get the current position
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
   }
 
   @override
@@ -82,6 +119,7 @@ class _SearchPageState extends State<SearchPage> {
                           .contains(value.toLowerCase()))
                       .toList();
                 });
+                _sortSearchResults();  // Sort after the search is performed
               },
             ),
           ),
@@ -121,8 +159,7 @@ class _SearchPageState extends State<SearchPage> {
                     onChanged: (value) {
                       setState(() {
                         _selectedFilter = value!;
-                        // Sort search results based on selected option
-                        _sortSearchResults();
+                        _sortSearchResults(); // Sort after changing filter
                       });
                     },
                   ),
@@ -161,7 +198,7 @@ class _SearchPageState extends State<SearchPage> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: AssetImage(caregiver['image']), // Add caregiver image
+                  backgroundImage: AssetImage(caregiver['image']),
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -207,18 +244,17 @@ class _SearchPageState extends State<SearchPage> {
                   child: const Text('View Profile'),
                 ),
                 ElevatedButton(
-                onPressed: () {
-                  // Navigate to MapScreen with caregivers' data
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MapScreen(caregivers: _searchResults), // Pass caregivers data
-                    ),
-                  );
-                },
-                child: const Text('View on Map'),
-              ),
-
+                  onPressed: () {
+                    // Navigate to MapScreen with only the selected caregiver's data
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MapScreen(caregivers: [caregiver]),
+                      ),
+                    );
+                  },
+                  child: const Text('View on Map'),
+                ),
               ],
             ),
           ],
@@ -305,21 +341,28 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // Sort Search Results
-  void _sortSearchResults() {
-    switch (_selectedFilter) {
-      case 'Rating':
-        _searchResults.sort((a, b) => b['rating'].compareTo(a['rating']));
-        break;
-      case 'Price':
-        _searchResults.sort((a, b) => a['hourlyRate'].compareTo(b['hourlyRate']));
-        break;
-      case 'Distance':
-        _searchResults.sort((a, b) => a['distance'].compareTo(b['distance']));
-        break;
-      default:
-        _searchResults.sort((a, b) => a['name'].compareTo(b['name']));
-        break;
+  // Sort Search Results based on location
+  Future<void> _sortSearchResults() async {
+    // Get current location
+    Position currentPosition = await _getCurrentLocation();
+
+    // Calculate the distance for each caregiver and store it in a temporary field
+    for (var caregiver in _searchResults) {
+      double distanceInMeters = Geolocator.distanceBetween(
+        currentPosition.latitude,
+        currentPosition.longitude,
+        caregiver['latitude'],
+        caregiver['longitude'],
+      );
+      caregiver['distanceInMeters'] = distanceInMeters;
     }
+
+    // Sort the search results based on distance (ascending order)
+    _searchResults.sort((a, b) {
+      return a['distanceInMeters'].compareTo(b['distanceInMeters']);
+    });
+
+    // Trigger UI update by calling setState after sorting
+    setState(() {});
   }
 }
