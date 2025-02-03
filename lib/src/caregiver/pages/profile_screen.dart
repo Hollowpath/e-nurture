@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:image_picker/image_picker.dart';
+import 'training_certification_page.dart';
 
 class CaregiverProfileScreen extends StatefulWidget {
   const CaregiverProfileScreen({super.key});
@@ -24,6 +25,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
   Map<String, dynamic> _userData = {};
   LatLng _selectedLocation = LatLng(0, 0); // For Google Maps location
   final TextEditingController _addressController = TextEditingController();
+  final List<String> _certifications = [];
 
   // Field controllers for editable information
   final TextEditingController _nameController = TextEditingController();
@@ -219,6 +221,109 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
   );
 }
 
+  // Certifications and Training Widget
+  Widget _buildCertifications(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Certifications and Training',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            // List existing certifications
+            ..._certifications.map(
+              (cert) => ListTile(
+                title: Text(cert),
+                trailing: IconButton(
+                  icon: const Icon(Icons.remove_circle, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _certifications.remove(cert);
+                    });
+                  },
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TrainingCertificationPage()),
+              );
+              },
+              child: const Text('Upload New Certification'),
+            ),
+            ],
+        ),
+      ),
+    );
+  }
+
+  /// Widget for the Rates and Services section (editable).
+  Widget _buildRatesAndServices() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Rates and Services',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _rateController,
+              decoration: const InputDecoration(
+                labelText: 'Hourly Rate',
+                suffixIcon: Icon(Icons.edit),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            TextFormField(
+              controller: _serviceController,
+              decoration: const InputDecoration(
+                labelText: 'Services Offered',
+                suffixIcon: Icon(Icons.edit),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatingsAndReviews() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Ratings and Reviews',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            const ListTile(
+              title: Text('Overall Rating'),
+              subtitle: Text('★★★★☆ 4.5/5'),
+            ),
+            const ListTile(
+              title: Text('Number of Reviews'),
+              subtitle: Text('25 Reviews'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to all reviews screen if needed.
+              },
+              child: const Text('View All Reviews'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 // Function to move camera to marker location
 void _moveCameraToMarker() async {
   final GoogleMapController controller = await _googleMapController.future;
@@ -277,6 +382,38 @@ void _moveCameraToMarker() async {
     );
   }
 
+    Widget _buildEarningsAndPayments() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Earnings and Payments',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            const ListTile(
+              title: Text('This Week'),
+              subtitle: Text('\$200'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to payment history screen.
+              },
+              child: const Text('View Payment History'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to update payment method screen.
+              },
+              child: const Text('Update Payment Method'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // --- Build the overall UI ---
   @override
   Widget build(BuildContext context) {
@@ -295,7 +432,15 @@ void _moveCameraToMarker() async {
               const SizedBox(height: 20),
               _buildPersonalInformation(),
               const SizedBox(height: 20),
+              _buildCertifications(context),
+              const SizedBox(height: 20),
               _buildLocationPicker(), // Add location picker
+              const SizedBox(height: 20),
+              _buildRatesAndServices(),
+              const SizedBox(height: 20),
+              _buildEarningsAndPayments(),
+              const SizedBox(height: 20),
+              _buildRatingsAndReviews(),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _updateProfile,
