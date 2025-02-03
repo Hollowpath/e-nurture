@@ -47,6 +47,7 @@ dependencies:
   file_picker: ^8.3.1
   intl: ^0.20.2
   firebase_storage: ^12.4.1
+  google_maps_flutter: ^2.10.0
 
 
 

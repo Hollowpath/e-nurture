@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:e_nurture/testmodule/map_screen.dart'; // Import the MapScreen here
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -22,29 +23,33 @@ class _SearchPageState extends State<SearchPage> {
     });
     // Example data for search results
     _searchResults = [
-      {
-        'name': 'Sarah',
-        'age': 36,
-        'rating': 4.5,
-        'hourlyRate': 20,
-        'certifications': ['CPR', 'First Aid'],
-        'Service': '5 years with toddlers',
-        'availability': 'Available Today',
-        'distance': '2 miles away',
-        'image': 'assets/caregiver1.jpg',
-      },
-      {
-        'name': 'John',
-        'age': 28,
-        'rating': 5.0,
-        'hourlyRate': 25,
-        'certifications': ['First Aid'],
-        'Service': '3 years with newborns',
-        'availability': 'Available Tomorrow',
-        'distance': '1 mile away',
-        'image': 'assets/caregiver2.jpg',
-      },
-    ];
+  {
+    'name': 'Sarah',
+    'age': 36,
+    'rating': 4.5,
+    'hourlyRate': 20,
+    'certifications': ['CPR', 'First Aid'],
+    'service': '5 years with toddlers',
+    'availability': 'Available Today',
+    'distance': '2 miles away',
+    'image': 'assets/caregiver1.jpg',
+    'latitude': 3.227522695048218,  // Add latitude
+    'longitude':  101.72566637963965,  // Add longitude
+  },
+  {
+    'name': 'John',
+    'age': 28,
+    'rating': 5.0,
+    'hourlyRate': 25,
+    'certifications': ['First Aid'],
+    'service': '3 years with newborns',
+    'availability': 'Available Tomorrow',
+    'distance': '1 mile away',
+    'image': 'assets/caregiver2.jpg',
+    'latitude': 3.2317263893115546,  // Add latitude
+    'longitude': 101.70450631492854,  // Add longitude
+  },
+  ];
   }
 
   @override
@@ -201,6 +206,19 @@ class _SearchPageState extends State<SearchPage> {
                   },
                   child: const Text('View Profile'),
                 ),
+                ElevatedButton(
+                onPressed: () {
+                  // Navigate to MapScreen with caregivers' data
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MapScreen(caregivers: _searchResults), // Pass caregivers data
+                    ),
+                  );
+                },
+                child: const Text('View on Map'),
+              ),
+
               ],
             ),
           ],
