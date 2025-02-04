@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'search_page.dart';
 
 class ParentHomePage extends StatelessWidget {
   const ParentHomePage({super.key});
@@ -83,7 +82,7 @@ class _ParentHomePage extends StatelessWidget {
         // Navigate to search page
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const SearchPage()),
+            MaterialPageRoute(builder: (context) => Container()), // Placeholder for the removed SearchPage
         );
       },
       child: AbsorbPointer(
