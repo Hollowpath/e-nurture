@@ -138,13 +138,11 @@ class _ParentHomePage extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        // Removing Flexible and setting shrinkWrap to true
         SizedBox(
-          height: 150, // Set a fixed height for the list to prevent overflow
+          height: 150,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: 5, // Example: 5 featured caregivers
-            shrinkWrap: true, // Prevents it from taking up excess space
             itemBuilder: (context, index) {
               return Container(
                 width: 120,
@@ -157,7 +155,7 @@ class _ParentHomePage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircleAvatar(
-                      backgroundImage: AssetImage('assets/caregiver.jpg'),
+                      backgroundImage: AssetImage('assets/caregiver.jpg'), // Add caregiver image
                     ),
                     SizedBox(height: 10),
                     Text('Jane Doe'),
