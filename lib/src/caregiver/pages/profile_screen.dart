@@ -20,7 +20,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _formKey = GlobalKey<FormState>();
-  String? _selectedProfilePicture; // Store the selected predefined image name
+  File? _profileImage;
   Map<String, dynamic> _userData = {};
   LatLng _selectedLocation = LatLng(0, 0); // For Google Maps location
   final TextEditingController _addressController = TextEditingController();
@@ -62,19 +62,47 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
             _userData['latitude'] ?? 0.0,
             _userData['longitude'] ?? 0.0,
           );
-          _selectedProfilePicture = _userData['profileImageUrl'];
         });
       }
     }
-  }
+        await _firestore.collection('users').doc(user!.uid).set({
+          'role': 'Childcare Giver',
+          'caregiverID': user.uid,
+          'name': _nameController.text,
+          'age': int.tryParse(_ageController.text) ?? 0,
+          'phone': _phoneController.text,
+          'bio': _bioController.text,
+          'rate': double.tryParse(_rateController.text) ?? 0.0,
+          'service': _serviceController.text,
+          // 'certifications': _certifications,
+        });
 
-  Future<void> _updateProfile() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        // Update Firestore with the selected predefined image and other data
+  }
+  
+
+ Future<void> _updateProfile() async {
+  if (_formKey.currentState?.validate() ?? false) {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      // Upload image if selected
+      if (_profileImage != null) {
+        Reference storageRef = FirebaseStorage.instance
+            .ref()
+            .child('profile_images/${user.uid}');
+        await storageRef.putFile(_profileImage!);
+        String imageUrl = await storageRef.getDownloadURL();
+        
+        // Update Firestore with address, image, and other data
+        await _firestore.collection('users').doc(user.uid).update({
+          'profileImageUrl': imageUrl,
+          'latitude': _selectedLocation.latitude,
+          'longitude': _selectedLocation.longitude,
+          'address': _addressController.text, // Save address here
+        });
+      } else {
+        // Update Firestore without uploading a profile image
         await _firestore.collection('users').doc(user.uid).set({
-          'profileImageUrl': _selectedProfilePicture,
+          'role': 'Childcare Giver',
           'caregiverID': user.uid,
           'name': _nameController.text,
           'age': int.tryParse(_ageController.text) ?? 0,
@@ -85,27 +113,24 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
           'latitude': _selectedLocation.latitude,
           'longitude': _selectedLocation.longitude,
           'address': _addressController.text, // Save address here
-        }, SetOptions(merge: true));
-
-        // Show confirmation message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
-        );
+        });
       }
+
+      // Show confirmation message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully')),
+      );
     }
   }
-
-  Future<void> _logOut() async {
-    await _auth.signOut();
-    Navigator.of(context).pushReplacementNamed('/login');
   }
 
-  Future<void> _removeAccount() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      await _firestore.collection('users').doc(user.uid).delete();
-      await user.delete();
-      Navigator.of(context).pushReplacementNamed('/login');
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
     }
   }
 
@@ -115,16 +140,16 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
       child: Stack(
         children: [
           GestureDetector(
-            onTap: _showProfilePictureOptions,
+            onTap: _pickImage,
             child: CircleAvatar(
               radius: 50,
-              backgroundImage: _selectedProfilePicture != null
-                  ? AssetImage('assets/images/$_selectedProfilePicture')
+              backgroundImage: _profileImage != null
+                  ? FileImage(_profileImage!)
                   : (_userData['profileImageUrl'] != null
                       ? NetworkImage(_userData['profileImageUrl'])
-                      : AssetImage('assets/pfpArtboard 1.png')) as ImageProvider<Object>?,
-              child: _selectedProfilePicture == null &&
-                      _userData['profileImageUrl'] == null
+                      : null) as ImageProvider<Object>?,
+              child: (_profileImage == null &&
+                      _userData['profileImageUrl'] == null)
                   ? const Icon(Icons.add_a_photo, size: 40)
                   : null,
             ),
@@ -134,7 +159,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
             right: 0,
             child: IconButton(
               icon: const Icon(Icons.edit, color: Colors.blue),
-              onPressed: _showProfilePictureOptions,
+              onPressed: _pickImage,
             ),
           ),
         ],
@@ -142,89 +167,123 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     );
   }
 
-  /// Show a dialog to choose between predefined profile pictures
-  Future<void> _showProfilePictureOptions() async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Choose a Profile Picture'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3, // 3 images per row
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+  /// Widget for the Google Map location picker
+  Widget _buildLocationPicker() {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          const Text('Select Your Location',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 200,
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: _selectedLocation, // Set this to the user's saved location
+                zoom: 14.0,
               ),
-              itemCount: 14, // 14 predefined images
-              itemBuilder: (context, index) {
-                final imageName = 'pfpArtboard ${index + 1}.png';
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedProfilePicture = imageName;
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: Image.asset(
-                    'assets/images/$imageName',
-                    fit: BoxFit.cover,
+              markers: {
+                Marker(
+                  markerId: MarkerId('selected-location'),
+                  position: _selectedLocation,
+                  infoWindow: InfoWindow(
+                    title: 'Your Location',
                   ),
+                ),
+              },
+              onMapCreated: (GoogleMapController controller) {
+                _googleMapController.complete(controller); // Save the controller
+                // Move the camera to the marker position after the map is created
+                controller.animateCamera(
+                  CameraUpdate.newLatLng(_selectedLocation),
                 );
+              },
+              onTap: (LatLng position) {
+                setState(() {
+                  _selectedLocation = position; // Update marker position
+                });
+                _moveCameraToMarker(); // Move camera when the user taps the map
               },
             ),
           ),
-        );
-      },
-    );
-  }
+          TextField(
+            controller: _addressController,
+            decoration: const InputDecoration(
+              labelText: 'Enter Address',
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
-  /// Widget for the Google Map location picker
-  Widget _buildLocationPicker() {
+  // Certifications and Training Widget
+  Widget _buildCertifications(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Select Your Location',
+            const Text('Certifications and Training',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            SizedBox(
-              height: 200,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: _selectedLocation, // Set this to the user's saved location
-                  zoom: 14.0,
+            // List existing certifications
+            ..._certifications.map(
+              (cert) => ListTile(
+                title: Text(cert),
+                trailing: IconButton(
+                  icon: const Icon(Icons.remove_circle, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _certifications.remove(cert);
+                    });
+                  },
                 ),
-                markers: {
-                  Marker(
-                    markerId: MarkerId('selected-location'),
-                    position: _selectedLocation,
-                    infoWindow: InfoWindow(
-                      title: 'Your Location',
-                    ),
-                  ),
-                },
-                onMapCreated: (GoogleMapController controller) {
-                  _googleMapController.complete(controller); // Save the controller
-                  // Move the camera to the marker position after the map is created
-                  controller.animateCamera(
-                    CameraUpdate.newLatLng(_selectedLocation),
-                  );
-                },
-                onTap: (LatLng position) {
-                  setState(() {
-                    _selectedLocation = position; // Update marker position
-                  });
-                  _moveCameraToMarker(); // Move camera when the user taps the map
-                },
               ),
             ),
-            TextField(
-              controller: _addressController,
+            ElevatedButton(
+              onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TrainingCertificationPage()),
+              );
+              },
+              child: const Text('Upload New Certification'),
+            ),
+            ],
+        ),
+      ),
+    );
+  }
+
+  /// Widget for the Rates and Services section (editable).
+  Widget _buildRatesAndServices() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Rates and Services',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _rateController,
               decoration: const InputDecoration(
-                labelText: 'Enter Address',
+                labelText: 'Hourly Rate',
+                suffixIcon: Icon(Icons.edit),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            TextFormField(
+              controller: _serviceController,
+              decoration: const InputDecoration(
+                labelText: 'Services Offered',
+                suffixIcon: Icon(Icons.edit),
               ),
             ),
           ],
@@ -233,13 +292,44 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     );
   }
 
-  // Function to move camera to marker location
-  void _moveCameraToMarker() async {
-    final GoogleMapController controller = await _googleMapController.future;
-    controller.animateCamera(
-      CameraUpdate.newLatLng(_selectedLocation),
+  Widget _buildRatingsAndReviews() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Ratings and Reviews',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            const ListTile(
+              title: Text('Overall Rating'),
+              subtitle: Text('★★★★☆ 4.5/5'),
+            ),
+            const ListTile(
+              title: Text('Number of Reviews'),
+              subtitle: Text('25 Reviews'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to all reviews screen if needed.
+              },
+              child: const Text('View All Reviews'),
+            ),
+          ],
+        ),
+      ),
     );
   }
+
+
+// Function to move camera to marker location
+void _moveCameraToMarker() async {
+  final GoogleMapController controller = await _googleMapController.future;
+  controller.animateCamera(
+    CameraUpdate.newLatLng(_selectedLocation),
+  );
+}
 
   /// Widget for the Personal Information section (editable).
   Widget _buildPersonalInformation() {
@@ -291,76 +381,6 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     );
   }
 
-    Widget _buildCertifications(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Certifications and Training',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            // List existing certifications
-            ..._certifications.map(
-              (cert) => ListTile(
-                title: Text(cert),
-                trailing: IconButton(
-                  icon: const Icon(Icons.remove_circle, color: Colors.red),
-                  onPressed: () {
-                    setState(() {
-                      _certifications.remove(cert);
-                    });
-                  },
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TrainingCertificationPage()),
-              );
-              },
-              child: const Text('Upload New Certification'),
-            ),
-            ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRatesAndServices() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Rates and Services',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _rateController,
-              decoration: const InputDecoration(
-                labelText: 'Hourly Rate',
-                suffixIcon: Icon(Icons.edit),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            TextFormField(
-              controller: _serviceController,
-              decoration: const InputDecoration(
-                labelText: 'Services Offered',
-                suffixIcon: Icon(Icons.edit),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
     Widget _buildEarningsAndPayments() {
     return Card(
       child: Padding(
@@ -393,36 +413,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     );
   }
 
-  Widget _buildRatingsAndReviews() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Ratings and Reviews',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            const ListTile(
-              title: Text('Overall Rating'),
-              subtitle: Text('★★★★☆ 4.5/5'),
-            ),
-            const ListTile(
-              title: Text('Number of Reviews'),
-              subtitle: Text('25 Reviews'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Navigate to all reviews screen if needed.
-              },
-              child: const Text('View All Reviews'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
+  // --- Build the overall UI ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -453,17 +444,6 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
               ElevatedButton(
                 onPressed: _updateProfile,
                 child: const Text('Save Profile'),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _logOut,
-                child: const Text('Log Out'),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: _removeAccount,
-                child: const Text('Remove Account'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               ),
             ],
           ),
