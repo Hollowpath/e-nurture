@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../widgets/parent_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart'; // Import geolocator for getting current location
 
 class ParentBookingListPage extends StatefulWidget {
   const ParentBookingListPage({super.key});
@@ -12,16 +13,27 @@ class ParentBookingListPage extends StatefulWidget {
 
 class BookingListPageState extends State<ParentBookingListPage> with SingleTickerProviderStateMixin {
   String _selectedFilter = 'All'; // Filter option for booked caregivers
+  String _selectedSort = 'Relevance'; // Sort option for caregivers
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   final user = FirebaseAuth.instance.currentUser;
   late TabController _tabController;
+
+  // Store the user's current position
+  Position? _currentPosition;
+
+  // Use ValueNotifier for better state management
+  final ValueNotifier<List<Map<String, dynamic>>> _searchNotifier = ValueNotifier([]);
+  List<Map<String, dynamic>> _searchResults = [];
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
     _tabController = TabController(length: 2, vsync: this);
+
+    // Get the user's current location
+    _getCurrentLocation();
   }
 
   @override
@@ -38,19 +50,82 @@ class BookingListPageState extends State<ParentBookingListPage> with SingleTicke
     });
   }
 
+  // Get current location
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    // Check for location permissions
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      return Future.error('Location permission denied');
+    } else if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permission permanently denied');
+    }
+
+    // Get the current position
+    _currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    setState(() {}); // Update the UI with the new position
+  }
+
+  // Calculate distance between the current location and the caregiver
+  double _calculateDistance(double lat, double lon) {
+    if (_currentPosition == null) return double.infinity;
+
+    return Geolocator.distanceBetween(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+      lat,
+      lon,
+    );
+  }
+
+  // Sort search results by proximity or other selected filter
+  void _sortSearchResults(List<Map<String, dynamic>> results) {
+    if (_selectedSort == 'Distance' && _currentPosition != null) {
+      results.sort((a, b) {
+        double distanceA = _calculateDistance(a['latitude'], a['longitude']);
+        double distanceB = _calculateDistance(b['latitude'], b['longitude']);
+        return distanceA.compareTo(distanceB);
+      });
+    } else if (_selectedSort == 'Alphabet') {
+      results.sort((a, b) => a['name'].compareTo(b['name']));
+    } else if (_selectedSort == 'Price') {
+      results.sort((a, b) => a['hourlyRate'].compareTo(b['hourlyRate']));
+    } else if (_selectedSort == 'Relevance') {
+      // You can implement your custom sorting logic for "Relevance"
+      results.sort((a, b) => a['name'].compareTo(b['name'])); // Just an example, sorting by name
+    }
+
+    // Update the notifier to trigger a rebuild
+    _searchNotifier.value = results;
+  }
+
   void _showFilterOptions() {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Filter Bookings'),
+          title: const Text('Filter and Sort Bookings'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const Text('Filter by:'),
               _buildFilterOption('All'),
               _buildFilterOption('Pending'),
               _buildFilterOption('Accepted'),
               _buildFilterOption('Canceled'),
+              const SizedBox(height: 20),
+              const Text('Sort by:'),
+              _buildSortOption('Alphabet'),
+              _buildSortOption('Distance'),
+              _buildSortOption('Price'),
             ],
           ),
         );
@@ -59,16 +134,45 @@ class BookingListPageState extends State<ParentBookingListPage> with SingleTicke
   }
 
   Widget _buildFilterOption(String filter) {
-    return ListTile(
+    return RadioListTile<String>(
       title: Text(filter),
-      trailing: _selectedFilter == filter ? const Icon(Icons.check) : null,
-      onTap: () {
+      value: filter,
+      groupValue: _selectedFilter,
+      onChanged: (value) {
         setState(() {
-          _selectedFilter = filter;
+          _selectedFilter = value!;
+          _applyFilters();
         });
-        Navigator.pop(context);
+        Navigator.of(context).pop();
       },
     );
+  }
+
+  Widget _buildSortOption(String sort) {
+    return RadioListTile<String>(
+      title: Text(sort),
+      value: sort,
+      groupValue: _selectedSort,
+      onChanged: (value) {
+        setState(() {
+          _selectedSort = value!;
+          _sortSearchResults(_searchResults);
+        });
+        Navigator.of(context).pop();
+      },
+    );
+  }
+
+  void _applyFilters() {
+    // Implement your filtering logic here based on _selectedFilter
+    // For example, filter _searchResults based on the selected filter
+    List<Map<String, dynamic>> filteredResults = _searchResults.where((result) {
+      if (_selectedFilter == 'All') return true;
+      return result['status'] == _selectedFilter;
+    }).toList();
+
+    // After filtering, sort the results
+    _sortSearchResults(filteredResults);
   }
 
   Widget _buildEmptyState(String message) {
@@ -135,12 +239,12 @@ class BookingListPageState extends State<ParentBookingListPage> with SingleTicke
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Navigate to booking screen or caregiver details.
-        },
-        child: const Icon(Icons.add),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     // Navigate to booking screen or caregiver details.
+      //   },
+      //   child: const Icon(Icons.add),
+      // ),
     );
   }
 
@@ -171,25 +275,55 @@ class BookingListPageState extends State<ParentBookingListPage> with SingleTicke
           return _buildEmptyState('No caregivers found.');
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: filteredDocs.length,
-          itemBuilder: (context, index) {
-            final data = filteredDocs[index].data();
-            return ParentCard(
-              caregiverId: data['caregiverID'] ?? 'Unnamed',
-              name: data['name'] ?? 'Unnamed',
-              age: data['age'] ?? 0,
-              rating: data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0,
-              hourlyRate: data['rate'] != null ? (data['rate'] as num).toInt() : 20,
-              certifications: data['certifications'] != null
-                  ? List<String>.from(data['certifications'])
-                  : const ['None'],
-              service: data['service'] ?? 'N/A',
-              availability: data['availability'] ?? 'N/A',
-              distance: data['distance'] ?? 'N/A',
-              image: data['profileImageUrl'] ?? 'assets/images/caregiver.png',
-            );
+        // Convert Firestore documents to a list of maps
+        _searchResults = filteredDocs.map((doc) {
+          final data = doc.data();
+          return {
+            'caregiverID': doc.id, // Include the document ID as caregiverID
+            'name': data['name'] ?? 'Unnamed',
+            'age': data['age'] ?? 0,
+            'rating': data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0,
+            'hourlyRate': data['rate'] != null ? (data['rate'] as num).toInt() : 20,
+            'certifications': data['certifications'] != null
+                ? List<String>.from(data['certifications'])
+                : const ['None'],
+            'service': data['service'] ?? 'N/A',
+            'availability': data['availability'] ?? 'N/A',
+            'latitude': data['latitude'] ?? 0.0,
+            'longitude': data['longitude'] ?? 0.0,
+            'image': data['image'] ?? 'assets/images/caregiver.png',
+          };
+        }).toList();
+
+        // Sort the results based on selected filter
+        _sortSearchResults(_searchResults);
+
+        return ValueListenableBuilder<List<Map<String, dynamic>>>(
+          valueListenable: _searchNotifier,
+          builder: (context, updatedResults, child) {
+            return updatedResults.isEmpty
+                ? _buildEmptyState('No caregivers found.')
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: updatedResults.length,
+                    itemBuilder: (context, index) {
+                      final caregiver = updatedResults[index];
+                      return ParentCard(
+                        caregiverId: caregiver['caregiverID'] ?? 'Unnamed',
+                        name: caregiver['name'] ?? 'Unnamed',
+                        age: caregiver['age'] ?? 0,
+                        rating: caregiver['rating'] ?? 0.0,
+                        hourlyRate: caregiver['hourlyRate'] ?? 20,
+                        certifications: caregiver['certifications'] ?? const ['None'],
+                        service: caregiver['service'] ?? 'N/A',
+                        availability: caregiver['availability'] ?? 'N/A',
+                        distance: '${_calculateDistance(caregiver['latitude'], caregiver['longitude']).toStringAsFixed(2)} meters away',
+                        latitude: caregiver['latitude'] ?? 0.0,
+                        longitude: caregiver['longitude'] ?? 0.0,
+                        image: caregiver['image'] ?? 'assets/images/caregiver.png',
+                      );
+                    },
+                  );
           },
         );
       },
@@ -217,7 +351,8 @@ class BookingListPageState extends State<ParentBookingListPage> with SingleTicke
         // Filter bookings based on the selected filter
         final filteredDocs = docs.where((doc) {
           final status = doc.data()['status'] ?? '';
-          return _selectedFilter == 'All' || status == _selectedFilter;
+          final name = (doc.data()['name'] ?? '').toString().toLowerCase();
+          return (_selectedFilter == 'All' || status == _selectedFilter) && name.contains(_searchQuery.toLowerCase());
         }).toList();
 
         if (filteredDocs.isEmpty) {
@@ -258,8 +393,10 @@ class BookingListPageState extends State<ParentBookingListPage> with SingleTicke
                       : const ['None'],
                   service: caregiver['service'] ?? 'N/A',
                   availability: caregiver['availability'] ?? 'N/A',
-                  distance: caregiver['distance'] ?? 'N/A',
-                  image: caregiver['profileImageUrl'] ?? 'assets/images/caregiver.png',
+                  distance: '${_calculateDistance(caregiver['latitude'], caregiver['longitude']).toStringAsFixed(2)} meters away',
+                  latitude: caregiver['latitude'] ?? 0.0,
+                  longitude: caregiver['longitude'] ?? 0.0,
+                  image: caregiver['image'] ?? 'assets/images/caregiver.png',
                   isBooked: true, // Set this to true for Booked List
                 );
               },

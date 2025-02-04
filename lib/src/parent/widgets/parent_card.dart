@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen
+import '../pages/availability_page.dart'; // Import the AvailabilityPage
 
 class ParentCard extends StatefulWidget {
   final String caregiverId;
@@ -15,6 +17,8 @@ class ParentCard extends StatefulWidget {
   final String image;
   final bool isBooked; // New parameter to check if it's in the Booked List
   final String status; // New parameter for booking status
+  final double latitude; // New parameter for latitude
+  final double longitude; // New parameter for longitude
 
   const ParentCard({
     super.key,
@@ -30,6 +34,8 @@ class ParentCard extends StatefulWidget {
     required this.image,
     this.isBooked = false, // Default to false
     this.status = 'Pending', // Default status
+    required this.latitude, // Required latitude
+    required this.longitude, // Required longitude
   });
 
   @override
@@ -45,6 +51,8 @@ class _ParentCardState extends State<ParentCard> {
   bool _isLoading = true;
   bool _isBooked = false;
   String _status = 'Pending';
+  double _rating = 0.0;
+  String _review = '';
 
   final List<String> _daysOfWeek = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -88,11 +96,111 @@ class _ParentCardState extends State<ParentCard> {
     }
   }
 
+  Future<void> _showAvailability() async {
+    final caregiverDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .get();
+
+    if (caregiverDoc.exists) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AvailabilityPage(caregiverId: widget.caregiverId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Caregiver not found')),
+      );
+    }
+  }
+
+Future<void> _submitRatingAndReview() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final reviewQuery = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(widget.caregiverId)
+      .collection('reviews')
+      .where('parentID', isEqualTo: user.uid)
+      .get();
+
+  if (reviewQuery.docs.isNotEmpty) {
+    // Update the existing review
+    final reviewDocId = reviewQuery.docs.first.id;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .collection('reviews')
+        .doc(reviewDocId)
+        .update({
+      'rating': _rating,
+      'review': _review,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  } else {
+    // Add a new review
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .collection('reviews')
+        .add({
+      'parentID': user.uid,
+      'rating': _rating,
+      'review': _review,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Recalculate the average rating
+  final allReviewsQuery = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(widget.caregiverId)
+      .collection('reviews')
+      .get();
+
+  double totalRating = 0.0;
+  for (var doc in allReviewsQuery.docs) {
+    totalRating += doc['rating'];
+  }
+  final averageRating = totalRating / allReviewsQuery.docs.length;
+
+  // Update the caregiver's rating in Firestore
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(widget.caregiverId)
+      .update({'rating': averageRating});
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Review submitted!')),
+  );
+
+  setState(() {
+    _rating = 0.0;
+    _review = '';
+  });
+}
+
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    final caregiver = {
+      'name': widget.name,
+      'age': widget.age,
+      'latitude': widget.latitude,
+      'longitude': widget.longitude,
+      'phone': '', // Add phone if available
+      'rate': widget.hourlyRate,
+      'service': widget.service,
+      'address': '', // Add address if available
+      'role': '', // Add role if available
+    };
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -104,7 +212,7 @@ class _ParentCardState extends State<ParentCard> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: AssetImage(widget.image),
+                  backgroundImage: AssetImage('assets/images/${widget.image}'),
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -118,10 +226,20 @@ class _ParentCardState extends State<ParentCard> {
                       ),
                     ),
                     Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        Text('${widget.rating}'),
-                      ],
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          index < widget.rating ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 16,
+                        );
+                      }),
+                    ),
+                    Text(
+                      widget.rating.toString(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -131,7 +249,7 @@ class _ParentCardState extends State<ParentCard> {
             Text('\$${widget.hourlyRate}/hour'),
             Text('Certifications: ${widget.certifications.join(', ')}'),
             Text('Service: ${widget.service}'),
-            Text('Availability: ${widget.availability}'),
+            // Text('Availability: ${widget.availability}'),
             Text('Distance: ${widget.distance}'),
             if (_isBooked) // Display status if it's in the Booked List
               Padding(
@@ -166,12 +284,26 @@ class _ParentCardState extends State<ParentCard> {
                   ),
                 const SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // Navigate to MapScreen with only the selected caregiver's data
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MapScreen(caregivers: [caregiver]),
+                      ),
+                    );
+                  },
                   child: const Text('View Profile'),
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _showAvailability,
+              child: const Text('Show Availability'),
+            ),
             if (_showBookingForm) _buildBookingForm(),
+            if (_status == 'Accepted') _buildRatingAndReviewForm(),
           ],
         ),
       ),
@@ -279,6 +411,55 @@ class _ParentCardState extends State<ParentCard> {
     );
   }
 
+  Widget _buildRatingAndReviewForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        const Text(
+          'Rate and Review:',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: List.generate(5, (index) {
+            return IconButton(
+              icon: Icon(
+                index < _rating ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+              ),
+              onPressed: () {
+                setState(() {
+                  _rating = index + 1.0;
+                });
+              },
+            );
+          }),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Review',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+          onChanged: (value) {
+            setState(() {
+              _review = value;
+            });
+          },
+        ),
+        const SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: _rating > 0 && _review.isNotEmpty
+              ? _submitRatingAndReview
+              : null,
+          child: const Text("Submit Review"),
+        ),
+      ],
+    );
+  }
+
   Future<void> _submitBooking() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -308,51 +489,49 @@ class _ParentCardState extends State<ParentCard> {
         .set({
           'caregiverID': widget.caregiverId,
           'status': 'Pending',
+          'name': widget.name,
         });
 
     _fetchBookingStatus(); // Refresh booking status after submitting
   }
 
-Future<void> _cancelBooking() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+  Future<void> _cancelBooking() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  // Find the booking to cancel
-  final bookingQuery = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .collection('bookings')
-      .where('caregiverID', isEqualTo: widget.caregiverId)
-      .where('status', whereIn: ['Pending', 'Accepted'])
-      .get();
-
-  if (bookingQuery.docs.isNotEmpty) {
-    final bookingId = bookingQuery.docs.first.id;
-
-    // Delete the booking from the parent's bookings collection
-    await FirebaseFirestore.instance
+    // Find the booking to cancel
+    final bookingQuery = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('bookings')
-        .doc(bookingId)
-        .delete();
+        .where('caregiverID', isEqualTo: widget.caregiverId)
+        .where('status', whereIn: ['Pending', 'Accepted', 'Cancelled'])
+        .get();
 
-    // Optionally, delete the booking from the caregiver's pending bookings
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.caregiverId)
-        .collection('pendingBookings')
-        .doc(bookingId)
-        .delete();
+    if (bookingQuery.docs.isNotEmpty) {
+      final bookingId = bookingQuery.docs.first.id;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Booking canceled!')),
-    );
+      // Delete the booking from the parent's bookings collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('bookings')
+          .doc(bookingId)
+          .delete();
 
-    _fetchBookingStatus(); // Refresh booking status after canceling
+      // Optionally, delete the booking from the caregiver's pending bookings
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.caregiverId)
+          .collection('pendingBookings')
+          .doc(bookingId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Booking canceled!')),
+      );
+
+      _fetchBookingStatus(); // Refresh booking status after canceling
+    }
   }
-}
-
-
-  
 }
