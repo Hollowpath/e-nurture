@@ -14,6 +14,7 @@ class ParentCard extends StatefulWidget {
   final String distance;
   final String image;
   final bool isBooked; // New parameter to check if it's in the Booked List
+  final String status; // New parameter for booking status
 
   const ParentCard({
     super.key,
@@ -28,6 +29,7 @@ class ParentCard extends StatefulWidget {
     required this.distance,
     required this.image,
     this.isBooked = false, // Default to false
+    this.status = 'Pending', // Default status
   });
 
   @override
@@ -40,13 +42,58 @@ class _ParentCardState extends State<ParentCard> {
   List<String> _selectedDays = [];
   int _childQuantity = 1;
   String _location = '';
+  bool _isLoading = true;
+  bool _isBooked = false;
+  String _status = 'Pending';
 
   final List<String> _daysOfWeek = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _fetchBookingStatus();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fetchBookingStatus();
+  }
+
+  Future<void> _fetchBookingStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final bookingQuery = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('bookings')
+        .where('caregiverID', isEqualTo: widget.caregiverId)
+        .get();
+
+    if (bookingQuery.docs.isNotEmpty) {
+      setState(() {
+        _isBooked = true;
+        _status = bookingQuery.docs.first['status'];
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _isBooked = false;
+        _status = 'Pending';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -86,10 +133,21 @@ class _ParentCardState extends State<ParentCard> {
             Text('Service: ${widget.service}'),
             Text('Availability: ${widget.availability}'),
             Text('Distance: ${widget.distance}'),
+            if (_isBooked) // Display status if it's in the Booked List
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Status: $_status',
+                  style: TextStyle(
+                    color: _getStatusColor(_status),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             const SizedBox(height: 10),
             Row(
               children: [
-                if (!widget.isBooked) // Show "Book Now" button only if not in Booked List
+                if (!_isBooked) // Show "Book Now" button only if not in Booked List
                   ElevatedButton(
                     onPressed: () {
                       setState(() {
@@ -98,7 +156,7 @@ class _ParentCardState extends State<ParentCard> {
                     },
                     child: const Text('Book Now'),
                   ),
-                if (widget.isBooked) // Show "Cancel Booking" button if in Booked List
+                if (_isBooked) // Show "Cancel Booking" button if in Booked List
                   ElevatedButton(
                     onPressed: _cancelBooking,
                     style: ElevatedButton.styleFrom(
@@ -118,6 +176,20 @@ class _ParentCardState extends State<ParentCard> {
         ),
       ),
     );
+  }
+
+  /// Helper method to get status color
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Pending':
+        return Colors.orange;
+      case 'Accepted':
+        return Colors.green;
+      case 'Cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildBookingForm() {
@@ -188,18 +260,20 @@ class _ParentCardState extends State<ParentCard> {
         ),
         const SizedBox(height: 10),
         ElevatedButton(
-          child: const Text("Confirm Booking"),
           onPressed: isFormValid()
               ? () async {
                   await _submitBooking();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Booking confirmed!')),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Booking confirmed!')),
+                    );
+                  }
                   setState(() {
                     _showBookingForm = false;
                   });
                 }
               : null,
+          child: const Text("Confirm Booking"),
         ),
       ],
     );
@@ -235,43 +309,50 @@ class _ParentCardState extends State<ParentCard> {
           'caregiverID': widget.caregiverId,
           'status': 'Pending',
         });
+
+    _fetchBookingStatus(); // Refresh booking status after submitting
   }
 
-  Future<void> _cancelBooking() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+Future<void> _cancelBooking() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
 
-    // Find the booking to cancel
-    final bookingQuery = await FirebaseFirestore.instance
+  // Find the booking to cancel
+  final bookingQuery = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .collection('bookings')
+      .where('caregiverID', isEqualTo: widget.caregiverId)
+      .where('status', whereIn: ['Pending', 'Accepted'])
+      .get();
+
+  if (bookingQuery.docs.isNotEmpty) {
+    final bookingId = bookingQuery.docs.first.id;
+
+    // Delete the booking from the parent's bookings collection
+    await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('bookings')
-        .where('caregiverID', isEqualTo: widget.caregiverId)
-        .where('status', isEqualTo: 'Pending')
-        .get();
+        .doc(bookingId)
+        .delete();
 
-    if (bookingQuery.docs.isNotEmpty) {
-      final bookingId = bookingQuery.docs.first.id;
+    // Optionally, delete the booking from the caregiver's pending bookings
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .collection('pendingBookings')
+        .doc(bookingId)
+        .delete();
 
-      // Delete the booking from the parent's bookings collection
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('bookings')
-          .doc(bookingId)
-          .delete();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Booking canceled!')),
+    );
 
-      // Optionally, delete the booking from the caregiver's pending bookings
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.caregiverId)
-          .collection('pendingBookings')
-          .doc(bookingId)
-          .delete();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Booking canceled!')),
-      );
-    }
+    _fetchBookingStatus(); // Refresh booking status after canceling
   }
+}
+
+
+  
 }
