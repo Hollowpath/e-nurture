@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen
+import '../pages/availability_page.dart'; // Import the AvailabilityPage
 
 class ParentCard extends StatefulWidget {
   final String caregiverId;
@@ -93,6 +94,26 @@ class _ParentCardState extends State<ParentCard> {
     }
   }
 
+Future<void> _showAvailability() async {
+  final caregiverDoc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(widget.caregiverId)
+      .get();
+
+  if (caregiverDoc.exists) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AvailabilityPage(caregiverId: widget.caregiverId),
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Caregiver not found')),
+    );
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -114,91 +135,96 @@ class _ParentCardState extends State<ParentCard> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+        Row(
           children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: AssetImage(widget.image),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${widget.name}, ${widget.age}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        Text('${widget.rating}'),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text('\$${widget.hourlyRate}/hour'),
-            Text('Certifications: ${widget.certifications.join(', ')}'),
-            Text('Service: ${widget.service}'),
-            Text('Availability: ${widget.availability}'),
-            Text('Distance: ${widget.distance}'),
-            if (_isBooked) // Display status if it's in the Booked List
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Text(
-                  'Status: $_status',
-                  style: TextStyle(
-                    color: _getStatusColor(_status),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+          CircleAvatar(
+            backgroundImage: AssetImage('assets/images/${widget.image}'),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+            Text(
+              '${widget.name}, ${widget.age}',
+              style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
               ),
-            const SizedBox(height: 10),
+            ),
             Row(
               children: [
-                if (!_isBooked) // Show "Book Now" button only if not in Booked List
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _showBookingForm = !_showBookingForm;
-                      });
-                    },
-                    child: const Text('Book Now'),
-                  ),
-                if (_isBooked) // Show "Cancel Booking" button if in Booked List
-                  ElevatedButton(
-                    onPressed: _cancelBooking,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red, // Red color for cancel button
-                    ),
-                    child: const Text('Cancel Booking'),
-                  ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    // Navigate to MapScreen with only the selected caregiver's data
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MapScreen(caregivers: [caregiver]),
-                      ),
-                    );
-                  },
-                  child: const Text('View Profile'),
-                ),
+              const Icon(Icons.star, color: Colors.amber, size: 16),
+              Text('${widget.rating}'),
               ],
             ),
-            if (_showBookingForm) _buildBookingForm(),
+            ],
+          ),
           ],
         ),
+        const SizedBox(height: 10),
+        Text('\$${widget.hourlyRate}/hour'),
+        Text('Certifications: ${widget.certifications.join(', ')}'),
+        Text('Service: ${widget.service}'),
+        // Text('Availability: ${widget.availability}'),
+        Text('Distance: ${widget.distance}'),
+        if (_isBooked) // Display status if it's in the Booked List
+          Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text(
+            'Status: $_status',
+            style: TextStyle(
+            color: _getStatusColor(_status),
+            fontWeight: FontWeight.bold,
+            ),
+          ),
+          ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+          if (!_isBooked) // Show "Book Now" button only if not in Booked List
+            ElevatedButton(
+            onPressed: () {
+              setState(() {
+              _showBookingForm = !_showBookingForm;
+              });
+            },
+            child: const Text('Book Now'),
+            ),
+          if (_isBooked) // Show "Cancel Booking" button if in Booked List
+            ElevatedButton(
+            onPressed: _cancelBooking,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red, // Red color for cancel button
+            ),
+            child: const Text('Cancel Booking'),
+            ),
+          const SizedBox(width: 10),
+          ElevatedButton(
+            onPressed: () {
+            // Navigate to MapScreen with only the selected caregiver's data
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+              builder: (context) => MapScreen(caregivers: [caregiver]),
+              ),
+            );
+            },
+            child: const Text('View Profile'),
+          ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: _showAvailability,
+          child: const Text('Show Availability'),
+        ),
+        if (_showBookingForm) _buildBookingForm(),
+        ],
+      ),
       ),
     );
   }

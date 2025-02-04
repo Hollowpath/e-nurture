@@ -291,7 +291,7 @@ class BookingListPageState extends State<ParentBookingListPage> with SingleTicke
             'availability': data['availability'] ?? 'N/A',
             'latitude': data['latitude'] ?? 0.0,
             'longitude': data['longitude'] ?? 0.0,
-            'image': data['profileImageUrl'] ?? 'assets/images/caregiver.png',
+            'image': data['image'] ?? 'assets/images/caregiver.png',
           };
         }).toList();
 
@@ -396,7 +396,7 @@ class BookingListPageState extends State<ParentBookingListPage> with SingleTicke
                   distance: '${_calculateDistance(caregiver['latitude'], caregiver['longitude']).toStringAsFixed(2)} meters away',
                   latitude: caregiver['latitude'] ?? 0.0,
                   longitude: caregiver['longitude'] ?? 0.0,
-                  image: caregiver['profileImageUrl'] ?? 'assets/images/caregiver.png',
+                  image: caregiver['image'] ?? 'assets/images/caregiver.png',
                   isBooked: true, // Set this to true for Booked List
                 );
               },

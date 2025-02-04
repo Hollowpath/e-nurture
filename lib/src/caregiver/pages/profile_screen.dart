@@ -62,7 +62,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
             _userData['latitude'] ?? 0.0,
             _userData['longitude'] ?? 0.0,
           );
-          _selectedProfilePicture = _userData['profileImageUrl'];
+          _selectedProfilePicture = _userData['image'];
         });
       }
     }
@@ -74,7 +74,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
       if (user != null) {
         // Update Firestore with the selected predefined image and other data
         await _firestore.collection('users').doc(user.uid).set({
-          'profileImageUrl': _selectedProfilePicture,
+          'image': _selectedProfilePicture,
           'caregiverID': user.uid,
           'name': _nameController.text,
           'age': int.tryParse(_ageController.text) ?? 0,
@@ -120,11 +120,11 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
               radius: 50,
               backgroundImage: _selectedProfilePicture != null
                   ? AssetImage('assets/images/$_selectedProfilePicture')
-                  : (_userData['profileImageUrl'] != null
-                      ? NetworkImage(_userData['profileImageUrl'])
+                  : (_userData['image'] != null
+                      ? NetworkImage(_userData['image'])
                       : AssetImage('assets/pfpArtboard 1.png')) as ImageProvider<Object>?,
               child: _selectedProfilePicture == null &&
-                      _userData['profileImageUrl'] == null
+                      _userData['image'] == null
                   ? const Icon(Icons.add_a_photo, size: 40)
                   : null,
             ),
