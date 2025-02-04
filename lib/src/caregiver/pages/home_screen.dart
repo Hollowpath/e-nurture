@@ -1,30 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'booking_list_page.dart';
 
 class CaregiverHomeScreen extends StatelessWidget {
   const CaregiverHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Example data
-    final List<Map<String, dynamic>> upcomingBookings = [
-      {
-        'date': 'Oct 15, 2023',
-        'time': '9:00 AM - 1:00 PM',
-        'parentName': 'John',
-        'children': 2,
-        'location': 'At Home',
-      },
-      {
-        'date': 'Oct 16, 2023',
-        'time': '2:00 PM - 6:00 PM',
-        'parentName': 'Sarah',
-        'children': 1,
-        'location': 'Office',
-      },
-    ];
-
-    const bool isAvailable = true; // Example availability status
-    const double weeklyEarnings = 200.0; // Example earnings
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('You must be logged in to view bookings.'),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -48,15 +39,15 @@ class CaregiverHomeScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Availability Status
-            _buildAvailabilityStatus(isAvailable),
+            _buildAvailabilityStatus(true), // Example availability status
             const SizedBox(height: 20),
 
             // Upcoming Bookings
-            _buildUpcomingBookings(upcomingBookings),
+            _buildUpcomingBookings(user.uid),
             const SizedBox(height: 20),
 
             // Earnings Summary
-            _buildEarningsSummary(weeklyEarnings),
+            _buildEarningsSummary(200.0), // Example earnings
             const SizedBox(height: 20),
 
             // Notifications
@@ -66,9 +57,6 @@ class CaregiverHomeScreen extends StatelessWidget {
             // Quick Actions
             _buildQuickActions(),
             const SizedBox(height: 20),
-
-            // Empty State (if no bookings)
-            if (upcomingBookings.isEmpty) _buildEmptyState(),
           ],
         ),
       ),
@@ -163,63 +151,93 @@ class CaregiverHomeScreen extends StatelessWidget {
   }
 
   // Upcoming Bookings Widget
-  Widget _buildUpcomingBookings(List<Map<String, dynamic>> bookings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Upcoming Bookings',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        if (bookings.isEmpty)
-          _buildEmptyState()
-        else
-          Column(
-            children: bookings.map((booking) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${booking['date']}, ${booking['time']}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+  Widget _buildUpcomingBookings(String caregiverId) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(caregiverId)
+          .collection('pendingBookings')
+          .where('status', isEqualTo: 'Pending')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No upcoming bookings.'));
+        }
+
+        final bookings = snapshot.data!.docs;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: bookings.map((booking) {
+            final bookingData = booking.data() as Map<String, dynamic>;
+
+            // Fetching parent information
+            final parentId = bookingData['parentID'];
+            final date = bookingData['timestamp'] != null
+                ? (bookingData['timestamp'] as Timestamp).toDate()
+                : DateTime.now();
+            final time = '${bookingData['selectedDays']}';
+            final children = bookingData['childQuantity'];
+            final location = bookingData['location'] ?? 'Unknown location';
+
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('users').doc(parentId).get(),
+              builder: (context, parentSnapshot) {
+                if (parentSnapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+
+                if (parentSnapshot.hasError || !parentSnapshot.hasData) {
+                  return const Text('Error loading parent details.');
+                }
+
+                final parent = parentSnapshot.data!.data() as Map<String, dynamic>;
+                final parentName = parent['name'] ?? 'Unknown Parent';
+
+                return GestureDetector(
+                  onTap: () {
+                    // Navigate to the booking list page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CaregiverBookingList(),
                       ),
-                      const SizedBox(height: 5),
-                      Text('Parent: ${booking['parentName']}'),
-                      Text('Children: ${booking['children']}'),
-                      Text('Location: ${booking['location']}'),
-                      const SizedBox(height: 10),
-                      Row(
+                    );
+                  },
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              // Navigate to booking details
-                            },
-                            child: const Text('View Details'),
+                          Text(
+                            '${date.toLocal()} at $time',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          const SizedBox(width: 10),
-                          ElevatedButton(
-                            onPressed: () {
-                              // Navigate to message parent
-                            },
-                            child: const Text('Message Parent'),
-                          ),
+                          const SizedBox(height: 5),
+                          Text('Parent: $parentName'),
+                          Text('Children: $children'),
+                          Text('Location: $location'),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
-      ],
+                );
+              },
+            );
+          }).toList(),
+        );
+      },
     );
   }
 
@@ -321,35 +339,6 @@ class CaregiverHomeScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  // Empty State Widget
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.calendar_today, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
-            'No upcoming bookings.',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Update your availability to get started!',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              // Navigate to set availability screen
-            },
-            child: const Text('Set Availability'),
-          ),
-        ],
       ),
     );
   }
