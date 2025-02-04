@@ -51,6 +51,8 @@ class _ParentCardState extends State<ParentCard> {
   bool _isLoading = true;
   bool _isBooked = false;
   String _status = 'Pending';
+  double _rating = 0.0;
+  String _review = '';
 
   final List<String> _daysOfWeek = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -94,25 +96,93 @@ class _ParentCardState extends State<ParentCard> {
     }
   }
 
-Future<void> _showAvailability() async {
-  final caregiverDoc = await FirebaseFirestore.instance
+  Future<void> _showAvailability() async {
+    final caregiverDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .get();
+
+    if (caregiverDoc.exists) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AvailabilityPage(caregiverId: widget.caregiverId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Caregiver not found')),
+      );
+    }
+  }
+
+Future<void> _submitRatingAndReview() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final reviewQuery = await FirebaseFirestore.instance
       .collection('users')
       .doc(widget.caregiverId)
+      .collection('reviews')
+      .where('parentID', isEqualTo: user.uid)
       .get();
 
-  if (caregiverDoc.exists) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AvailabilityPage(caregiverId: widget.caregiverId),
-      ),
-    );
+  if (reviewQuery.docs.isNotEmpty) {
+    // Update the existing review
+    final reviewDocId = reviewQuery.docs.first.id;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .collection('reviews')
+        .doc(reviewDocId)
+        .update({
+      'rating': _rating,
+      'review': _review,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Caregiver not found')),
-    );
+    // Add a new review
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .collection('reviews')
+        .add({
+      'parentID': user.uid,
+      'rating': _rating,
+      'review': _review,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   }
+
+  // Recalculate the average rating
+  final allReviewsQuery = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(widget.caregiverId)
+      .collection('reviews')
+      .get();
+
+  double totalRating = 0.0;
+  for (var doc in allReviewsQuery.docs) {
+    totalRating += doc['rating'];
+  }
+  final averageRating = totalRating / allReviewsQuery.docs.length;
+
+  // Update the caregiver's rating in Firestore
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(widget.caregiverId)
+      .update({'rating': averageRating});
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Review submitted!')),
+  );
+
+  setState(() {
+    _rating = 0.0;
+    _review = '';
+  });
 }
+
 
   @override
   Widget build(BuildContext context) {
@@ -135,96 +205,107 @@ Future<void> _showAvailability() async {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-        Row(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          CircleAvatar(
-            backgroundImage: AssetImage('assets/images/${widget.image}'),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            Text(
-              '${widget.name}, ${widget.age}',
-              style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              ),
-            ),
             Row(
               children: [
-              const Icon(Icons.star, color: Colors.amber, size: 16),
-              Text('${widget.rating}'),
+                CircleAvatar(
+                  backgroundImage: AssetImage('assets/images/${widget.image}'),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${widget.name}, ${widget.age}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          index < widget.rating ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 16,
+                        );
+                      }),
+                    ),
+                    Text(
+                      widget.rating.toString(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-            ],
-          ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Text('\$${widget.hourlyRate}/hour'),
-        Text('Certifications: ${widget.certifications.join(', ')}'),
-        Text('Service: ${widget.service}'),
-        // Text('Availability: ${widget.availability}'),
-        Text('Distance: ${widget.distance}'),
-        if (_isBooked) // Display status if it's in the Booked List
-          Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: Text(
-            'Status: $_status',
-            style: TextStyle(
-            color: _getStatusColor(_status),
-            fontWeight: FontWeight.bold,
-            ),
-          ),
-          ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-          if (!_isBooked) // Show "Book Now" button only if not in Booked List
-            ElevatedButton(
-            onPressed: () {
-              setState(() {
-              _showBookingForm = !_showBookingForm;
-              });
-            },
-            child: const Text('Book Now'),
-            ),
-          if (_isBooked) // Show "Cancel Booking" button if in Booked List
-            ElevatedButton(
-            onPressed: _cancelBooking,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, // Red color for cancel button
-            ),
-            child: const Text('Cancel Booking'),
-            ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: () {
-            // Navigate to MapScreen with only the selected caregiver's data
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-              builder: (context) => MapScreen(caregivers: [caregiver]),
+            const SizedBox(height: 10),
+            Text('\$${widget.hourlyRate}/hour'),
+            Text('Certifications: ${widget.certifications.join(', ')}'),
+            Text('Service: ${widget.service}'),
+            // Text('Availability: ${widget.availability}'),
+            Text('Distance: ${widget.distance}'),
+            if (_isBooked) // Display status if it's in the Booked List
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Status: $_status',
+                  style: TextStyle(
+                    color: _getStatusColor(_status),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            );
-            },
-            child: const Text('View Profile'),
-          ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                if (!_isBooked) // Show "Book Now" button only if not in Booked List
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _showBookingForm = !_showBookingForm;
+                      });
+                    },
+                    child: const Text('Book Now'),
+                  ),
+                if (_isBooked) // Show "Cancel Booking" button if in Booked List
+                  ElevatedButton(
+                    onPressed: _cancelBooking,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red, // Red color for cancel button
+                    ),
+                    child: const Text('Cancel Booking'),
+                  ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () {
+                    // Navigate to MapScreen with only the selected caregiver's data
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MapScreen(caregivers: [caregiver]),
+                      ),
+                    );
+                  },
+                  child: const Text('View Profile'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _showAvailability,
+              child: const Text('Show Availability'),
+            ),
+            if (_showBookingForm) _buildBookingForm(),
+            if (_status == 'Accepted') _buildRatingAndReviewForm(),
           ],
         ),
-        const SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: _showAvailability,
-          child: const Text('Show Availability'),
-        ),
-        if (_showBookingForm) _buildBookingForm(),
-        ],
-      ),
       ),
     );
   }
@@ -325,6 +406,55 @@ Future<void> _showAvailability() async {
                 }
               : null,
           child: const Text("Confirm Booking"),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRatingAndReviewForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        const Text(
+          'Rate and Review:',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: List.generate(5, (index) {
+            return IconButton(
+              icon: Icon(
+                index < _rating ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+              ),
+              onPressed: () {
+                setState(() {
+                  _rating = index + 1.0;
+                });
+              },
+            );
+          }),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Review',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+          onChanged: (value) {
+            setState(() {
+              _review = value;
+            });
+          },
+        ),
+        const SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: _rating > 0 && _review.isNotEmpty
+              ? _submitRatingAndReview
+              : null,
+          child: const Text("Submit Review"),
         ),
       ],
     );
