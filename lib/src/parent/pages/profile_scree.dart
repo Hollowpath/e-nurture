@@ -55,6 +55,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         // Update Firestore with the selected predefined image and other data
         await _firestore.collection('users').doc(user.uid).set({
           'profileImageUrl': _selectedProfilePicture,
+          'caregiverID': user.uid,
           'name': _nameController.text,
           'phone': _phoneController.text,
           'address': _addressController.text,
