@@ -69,6 +69,20 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    await _auth.signOut();
+    Navigator.of(context).pushReplacementNamed('/login');
+  }
+
+  Future<void> _deleteAccount() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).delete();
+      await user.delete();
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
+
   /// Widget for the profile picture section.
   Widget _buildProfilePicture() {
     return Center(
@@ -209,6 +223,17 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
               ElevatedButton(
                 onPressed: _updateProfile,
                 child: const Text('Save Profile'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _logout,
+                child: const Text('Logout'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _deleteAccount,
+                child: const Text('Delete Account'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               ),
             ],
           ),

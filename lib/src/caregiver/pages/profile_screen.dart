@@ -75,6 +75,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
         // Update Firestore with the selected predefined image and other data
         await _firestore.collection('users').doc(user.uid).set({
           'profileImageUrl': _selectedProfilePicture,
+          'caregiverID': user.uid,
           'name': _nameController.text,
           'age': int.tryParse(_ageController.text) ?? 0,
           'phone': _phoneController.text,
@@ -290,6 +291,138 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     );
   }
 
+    Widget _buildCertifications(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Certifications and Training',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            // List existing certifications
+            ..._certifications.map(
+              (cert) => ListTile(
+                title: Text(cert),
+                trailing: IconButton(
+                  icon: const Icon(Icons.remove_circle, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _certifications.remove(cert);
+                    });
+                  },
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TrainingCertificationPage()),
+              );
+              },
+              child: const Text('Upload New Certification'),
+            ),
+            ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatesAndServices() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Rates and Services',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _rateController,
+              decoration: const InputDecoration(
+                labelText: 'Hourly Rate',
+                suffixIcon: Icon(Icons.edit),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            TextFormField(
+              controller: _serviceController,
+              decoration: const InputDecoration(
+                labelText: 'Services Offered',
+                suffixIcon: Icon(Icons.edit),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+    Widget _buildEarningsAndPayments() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Earnings and Payments',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            const ListTile(
+              title: Text('This Week'),
+              subtitle: Text('\$200'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to payment history screen.
+              },
+              child: const Text('View Payment History'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to update payment method screen.
+              },
+              child: const Text('Update Payment Method'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatingsAndReviews() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Ratings and Reviews',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            const ListTile(
+              title: Text('Overall Rating'),
+              subtitle: Text('★★★★☆ 4.5/5'),
+            ),
+            const ListTile(
+              title: Text('Number of Reviews'),
+              subtitle: Text('25 Reviews'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to all reviews screen if needed.
+              },
+              child: const Text('View All Reviews'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -307,7 +440,15 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
               const SizedBox(height: 20),
               _buildPersonalInformation(),
               const SizedBox(height: 20),
-              _buildLocationPicker(),
+              _buildCertifications(context),
+              const SizedBox(height: 20),
+              _buildLocationPicker(), // Add location picker
+              const SizedBox(height: 20),
+              _buildRatesAndServices(),
+              const SizedBox(height: 20),
+              _buildEarningsAndPayments(),
+              const SizedBox(height: 20),
+              _buildRatingsAndReviews(),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _updateProfile,

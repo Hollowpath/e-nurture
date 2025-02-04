@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CaregiverCard extends StatelessWidget {
+  final String bookingId;
   final String date;
   final String time;
   final String parentName;
@@ -14,6 +16,7 @@ class CaregiverCard extends StatelessWidget {
 
   const CaregiverCard({
     super.key,
+    required this.bookingId,
     required this.date,
     required this.time,
     required this.parentName,
@@ -62,14 +65,13 @@ class CaregiverCard extends StatelessWidget {
               children: [
                 if (status == 'Pending')
                   ElevatedButton(
-                    onPressed: onAccept,
+                    onPressed: onAccept, // Use callback function
                     child: const Text('Accept'),
                   ),
-                if (status == 'Pending')
-                  const SizedBox(width: 10),
+                if (status == 'Pending') const SizedBox(width: 10),
                 if (status == 'Pending')
                   ElevatedButton(
-                    onPressed: onReject,
+                    onPressed: onReject, // Use callback function
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                     ),

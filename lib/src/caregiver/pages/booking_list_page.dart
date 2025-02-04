@@ -89,6 +89,7 @@ class CaregiverBookingList extends StatelessWidget {
                 final parent = parentSnapshot.data!.data() as Map<String, dynamic>;
 
                 return CaregiverCard(
+                  bookingId: bookingId,
                   date: booking['selectedDays'].join(', '),
                   time: '${booking['startTime']} - ${booking['endTime']}',
                   parentName: parent['name'] ?? 'Unknown',
