@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
-//import 'package:get/get.dart';
+import 'package:get/get.dart';
 //import 'package:cloud_firestore/cloud_firestore.dart';
 //import 'login_screen.dart';
 import '../utils/role_based_navigation.dart';
@@ -62,23 +62,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-void _handleRegistration() async {
-  if (_formKey.currentState!.validate()) {
-    final user = await _authService.signUpWithEmail(
-      _emailController.text,
-      _passwordController.text,
-      _selectedRole,
-    );
-    if (user != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => RoleBasedNavigation.determineHomeScreen(user),
-        ),
+  void _handleRegistration() async {
+    if (_formKey.currentState!.validate()) {
+      final user = await _authService.signUpWithEmail(
+        _emailController.text,
+        _passwordController.text,
+        _selectedRole,
       );
+      if (user == null) {
+        Get.snackbar('Error', 'Registration failed');
+      } else {
+        Get.off(() => RoleBasedNavigation.determineHomeScreen(user));
+      }
     }
   }
-}
-}
 
-// class RegisterScreen extends StatefulWidget {
+}
