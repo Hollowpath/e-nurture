@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen
 
 class ParentCard extends StatefulWidget {
   final String caregiverId;
@@ -15,6 +16,8 @@ class ParentCard extends StatefulWidget {
   final String image;
   final bool isBooked; // New parameter to check if it's in the Booked List
   final String status; // New parameter for booking status
+  final double latitude; // New parameter for latitude
+  final double longitude; // New parameter for longitude
 
   const ParentCard({
     super.key,
@@ -30,6 +33,8 @@ class ParentCard extends StatefulWidget {
     required this.image,
     this.isBooked = false, // Default to false
     this.status = 'Pending', // Default status
+    required this.latitude, // Required latitude
+    required this.longitude, // Required longitude
   });
 
   @override
@@ -93,6 +98,18 @@ class _ParentCardState extends State<ParentCard> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    final caregiver = {
+      'name': widget.name,
+      'age': widget.age,
+      'latitude': widget.latitude,
+      'longitude': widget.longitude,
+      'phone': '', // Add phone if available
+      'rate': widget.hourlyRate,
+      'service': widget.service,
+      'address': '', // Add address if available
+      'role': '', // Add role if available
+    };
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -166,7 +183,15 @@ class _ParentCardState extends State<ParentCard> {
                   ),
                 const SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // Navigate to MapScreen with only the selected caregiver's data
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MapScreen(caregivers: [caregiver]),
+                      ),
+                    );
+                  },
                   child: const Text('View Profile'),
                 ),
               ],
@@ -308,51 +333,49 @@ class _ParentCardState extends State<ParentCard> {
         .set({
           'caregiverID': widget.caregiverId,
           'status': 'Pending',
+          'name': widget.name,
         });
 
     _fetchBookingStatus(); // Refresh booking status after submitting
   }
 
-Future<void> _cancelBooking() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+  Future<void> _cancelBooking() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  // Find the booking to cancel
-  final bookingQuery = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .collection('bookings')
-      .where('caregiverID', isEqualTo: widget.caregiverId)
-      .where('status', whereIn: ['Pending', 'Accepted'])
-      .get();
-
-  if (bookingQuery.docs.isNotEmpty) {
-    final bookingId = bookingQuery.docs.first.id;
-
-    // Delete the booking from the parent's bookings collection
-    await FirebaseFirestore.instance
+    // Find the booking to cancel
+    final bookingQuery = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('bookings')
-        .doc(bookingId)
-        .delete();
+        .where('caregiverID', isEqualTo: widget.caregiverId)
+        .where('status', whereIn: ['Pending', 'Accepted', 'Cancelled'])
+        .get();
 
-    // Optionally, delete the booking from the caregiver's pending bookings
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.caregiverId)
-        .collection('pendingBookings')
-        .doc(bookingId)
-        .delete();
+    if (bookingQuery.docs.isNotEmpty) {
+      final bookingId = bookingQuery.docs.first.id;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Booking canceled!')),
-    );
+      // Delete the booking from the parent's bookings collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('bookings')
+          .doc(bookingId)
+          .delete();
 
-    _fetchBookingStatus(); // Refresh booking status after canceling
+      // Optionally, delete the booking from the caregiver's pending bookings
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.caregiverId)
+          .collection('pendingBookings')
+          .doc(bookingId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Booking canceled!')),
+      );
+
+      _fetchBookingStatus(); // Refresh booking status after canceling
+    }
   }
-}
-
-
-  
 }
