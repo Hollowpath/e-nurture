@@ -7,11 +7,11 @@ import 'src/auth/login_screen.dart';
 import 'src/parent/parent_app.dart';
 import 'src/caregiver/caregiver_app.dart';
 import 'package:get/get.dart';
-// import 'donor_home.dart';
+import 'src/utils/flutter_local_notifications.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
@@ -26,7 +26,8 @@ void main() async {
   } else {
     await Firebase.initializeApp();
   }
-
+  initializeNotifications();
+  
   runApp(const MyApp());
 }
 
@@ -52,6 +53,8 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});

@@ -61,39 +61,34 @@ class _ParentCardState extends State<ParentCard> {
   @override
   void initState() {
     super.initState();
-    _fetchBookingStatus();
+    _listenToBookingStatus();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _fetchBookingStatus();
-  }
-
-  Future<void> _fetchBookingStatus() async {
+  void _listenToBookingStatus() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final bookingQuery = await FirebaseFirestore.instance
+    FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('bookings')
         .where('caregiverID', isEqualTo: widget.caregiverId)
-        .get();
-
-    if (bookingQuery.docs.isNotEmpty) {
-      setState(() {
-        _isBooked = true;
-        _status = bookingQuery.docs.first['status'];
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _isBooked = false;
-        _status = 'Pending';
-        _isLoading = false;
-      });
-    }
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        setState(() {
+          _isBooked = true;
+          _status = snapshot.docs.first['status'];
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isBooked = false;
+          _status = 'Pending';
+          _isLoading = false;
+        });
+      }
+    });
   }
 
   Future<void> _showAvailability() async {
@@ -116,73 +111,72 @@ class _ParentCardState extends State<ParentCard> {
     }
   }
 
-Future<void> _submitRatingAndReview() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+  Future<void> _submitRatingAndReview() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  final reviewQuery = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(widget.caregiverId)
-      .collection('reviews')
-      .where('parentID', isEqualTo: user.uid)
-      .get();
-
-  if (reviewQuery.docs.isNotEmpty) {
-    // Update the existing review
-    final reviewDocId = reviewQuery.docs.first.id;
-    await FirebaseFirestore.instance
+    final reviewQuery = await FirebaseFirestore.instance
         .collection('users')
         .doc(widget.caregiverId)
         .collection('reviews')
-        .doc(reviewDocId)
-        .update({
-      'rating': _rating,
-      'review': _review,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-  } else {
-    // Add a new review
-    await FirebaseFirestore.instance
+        .where('parentID', isEqualTo: user.uid)
+        .get();
+
+    if (reviewQuery.docs.isNotEmpty) {
+      // Update the existing review
+      final reviewDocId = reviewQuery.docs.first.id;
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.caregiverId)
+          .collection('reviews')
+          .doc(reviewDocId)
+          .update({
+        'rating': _rating,
+        'review': _review,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Add a new review
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.caregiverId)
+          .collection('reviews')
+          .add({
+        'parentID': user.uid,
+        'rating': _rating,
+        'review': _review,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Recalculate the average rating
+    final allReviewsQuery = await FirebaseFirestore.instance
         .collection('users')
         .doc(widget.caregiverId)
         .collection('reviews')
-        .add({
-      'parentID': user.uid,
-      'rating': _rating,
-      'review': _review,
-      'timestamp': FieldValue.serverTimestamp(),
+        .get();
+
+    double totalRating = 0.0;
+    for (var doc in allReviewsQuery.docs) {
+      totalRating += doc['rating'];
+    }
+    final averageRating = totalRating / allReviewsQuery.docs.length;
+
+    // Update the caregiver's rating in Firestore
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .update({'rating': averageRating});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Review submitted!')),
+    );
+
+    setState(() {
+      _rating = 0.0;
+      _review = '';
     });
   }
-
-  // Recalculate the average rating
-  final allReviewsQuery = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(widget.caregiverId)
-      .collection('reviews')
-      .get();
-
-  double totalRating = 0.0;
-  for (var doc in allReviewsQuery.docs) {
-    totalRating += doc['rating'];
-  }
-  final averageRating = totalRating / allReviewsQuery.docs.length;
-
-  // Update the caregiver's rating in Firestore
-  await FirebaseFirestore.instance
-      .collection('users')
-      .doc(widget.caregiverId)
-      .update({'rating': averageRating});
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Review submitted!')),
-  );
-
-  setState(() {
-    _rating = 0.0;
-    _review = '';
-  });
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -293,7 +287,7 @@ Future<void> _submitRatingAndReview() async {
                       ),
                     );
                   },
-                  child: const Text('View Profile'),
+                  child: const Text('View Location'),
                 ),
               ],
             ),
@@ -533,5 +527,32 @@ Future<void> _submitRatingAndReview() async {
 
       _fetchBookingStatus(); // Refresh booking status after canceling
     }
+  }
+
+  void _fetchBookingStatus() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('bookings')
+        .where('caregiverID', isEqualTo: widget.caregiverId)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        setState(() {
+          _isBooked = true;
+          _status = snapshot.docs.first['status'];
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isBooked = false;
+          _status = 'Pending';
+          _isLoading = false;
+        });
+      }
+    });
   }
 }

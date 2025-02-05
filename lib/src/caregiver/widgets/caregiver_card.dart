@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 
 class CaregiverCard extends StatelessWidget {
   final String bookingId;
@@ -14,7 +16,7 @@ class CaregiverCard extends StatelessWidget {
   final VoidCallback? onViewDetails;
   final VoidCallback? onMessageParent;
 
-  const CaregiverCard({
+  CaregiverCard({
     super.key,
     required this.bookingId,
     required this.date,
@@ -28,6 +30,42 @@ class CaregiverCard extends StatelessWidget {
     this.onViewDetails,
     this.onMessageParent,
   });
+
+    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+    void initializeNotifications() {
+      const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      final InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+      flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    }
+
+    Future<void> showNotification(String parentName) async {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'caretaker_request_channel',
+      'Caretaker Request Notifications',
+      channelDescription: 'Notifications for accepted caretaker requests',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false,
+      );
+
+      const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+      await flutterLocalNotificationsPlugin.show(
+      0,
+      'Booking Accepted',
+      'Your booking request has been accepted by the caregiver.',
+      platformChannelSpecifics,
+      payload: parentName,
+      );
+    }
 
   @override
   Widget build(BuildContext context) {
@@ -80,10 +118,23 @@ class CaregiverCard extends StatelessWidget {
         Row(
           children: [
           if (status == 'Pending')
-            ElevatedButton(
-            onPressed: onAccept, // Use callback function
+
+          ElevatedButton(
+            onPressed: () async {
+            if (onAccept != null) {
+              onAccept!();
+              ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Booking accepted!'),
+              ),
+              );
+              await showNotification(parentName);
+            }
+            },
             child: const Text('Accept'),
-            ),
+          ),
+
+
           if (status == 'Pending') const SizedBox(width: 10),
           if (status == 'Pending')
             ElevatedButton(
