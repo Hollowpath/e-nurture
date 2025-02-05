@@ -117,7 +117,7 @@ class _MapScreenState extends State<MapScreen> {
 - **Uploading caregiver training certificates to Firebase Storage.**
 - **Displaying uploaded certifications as images within the app.**
 
-##### **1. Uploading Certification to Firebase**
+##### **3. Uploading Certification to Firebase**
 ```dart
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -157,7 +157,7 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
 }
 ```
 
-2. **Push Notifications for Real-Time Updates** 
+4. **Push Notifications for Real-Time Updates** 
 #### Implemented by **Dhazreel Aiman Bin Darmawi (Matric No: 2116597)**
    Push notifications are implemented to provide real-time updates to both parents and caregivers. For example, parents will receive notifications when a caregiver confirms their booking.
 ```dart
@@ -206,7 +206,7 @@ class NotificationService {
 }
 ```
 
-6. **User Profile and Sentiment-Based Review System**
+5. **User Profile and Sentiment-Based Review System**
 #### Implemented by **Dhazreel Aiman Bin Darmawi (Matric No: 2116597)**
    **Mobile-based sentiment analysis** can help summarize caregiver reviews into an overall sentiment score. Ratings and reviews will be collected and displayed within the app to build trust and ensure transparency between caregivers and parents.
 ```dart
@@ -301,6 +301,180 @@ Widget _buildRatingsAndReviews() {
 }
 
 ```
+##### **6. User based authentication**
+#### Implemented by **Hanif Asyraf Bin Mohd Sabri (Matric No: 2217813)**
+```dart
+class AuthService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  Future<User?> signInWithEmail(String email, String password) async {
+    try {
+      final result = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return result.user;
+    } catch (e) {
+      print("Login error: $e");
+      return null;
+    }
+  }
+
+  Future<User?> signUpWithEmail(
+    String email,
+    String password,
+    String role,
+  ) async {
+    try {
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      await _firestore.collection('users').doc(result.user?.uid).set({
+        'email': email,
+        'role': role,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      
+      return result.user;
+    } catch (e) {
+      print("Registration error: $e");
+      return null;
+    }
+  }
+
+  Future<void> signOut() async => await _auth.signOut();
+
+  Future<String> getUserRole(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return doc.get('role') ?? 'unknown';
+  }
+}
+```
+```dart
+void _handleLogin() async {
+  if (_formKey.currentState!.validate()) {
+    final user = await _authService.signInWithEmail(
+      _emailController.text,
+      _passwordController.text,
+    );
+    if (user == null) {
+      Get.snackbar('Error', 'Login failed');
+    } else {
+      Get.off(() => RoleBasedNavigation.determineHomeScreen(user));
+    }
+  }
+}
+```
+```dart
+ void _handleRegistration() async {
+    if (_formKey.currentState!.validate()) {
+      final user = await _authService.signUpWithEmail(
+        _emailController.text,
+        _passwordController.text,
+        _selectedRole,
+      );
+      if (user == null) {
+        Get.snackbar('Error', 'Registration failed');
+      } else {
+        Get.off(() => RoleBasedNavigation.determineHomeScreen(user));
+      }
+    }
+  }
+```
+##### **7. Display and search users**
+#### Implemented by **Hanif Asyraf Bin Mohd Sabri (Matric No: 2217813)**
+```dart
+Widget _buildSearchList() {
+    final Stream<QuerySnapshot<Map<String, dynamic>>> caregiverStream = FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: "Childcare Giver")
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: caregiverStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final docs = snapshot.data?.docs ?? [];
+
+        // Filter caregivers based on the search query
+        final filteredDocs = docs.where((doc) {
+          final name = (doc.data()['name'] ?? '').toString().toLowerCase();
+          return name.contains(_searchQuery.toLowerCase());
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
+          return _buildEmptyState('No caregivers found.');
+        }
+
+```
+##### **8. Profile Page**
+#### Implemented by **Hanif Asyraf Bin Mohd Sabri (Matric No: 2217813)**
+```dart
+  // Load user data from Firestore
+  Future<void> _loadUserData() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        setState(() {
+          _userData = doc.data() as Map<String, dynamic>;
+          _nameController.text = _userData['name'] ?? '';
+          _ageController.text = _userData['age']?.toString() ?? '';
+          _phoneController.text = _userData['phone'] ?? '';
+          _bioController.text = _userData['bio'] ?? '';
+          _rateController.text = _userData['rate']?.toString() ?? '';
+          _serviceController.text = _userData['service'] ?? '';
+          _addressController.text = _userData['address'] ?? '';
+          _selectedLocation = LatLng(
+            _userData['latitude'] ?? 0.0,
+            _userData['longitude'] ?? 0.0,
+          );
+          _selectedProfilePicture = _userData['image'];
+        });
+      }
+    }
+  }  `
+```
+```dart
+  // Update user profile
+  Future<void> _updateProfile() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'image': _selectedProfilePicture,
+          'caregiverID': user.uid,
+          'name': _nameController.text,
+          'age': int.tryParse(_ageController.text) ?? 0,
+          'phone': _phoneController.text,
+          'bio': _bioController.text,
+          'rate': double.tryParse(_rateController.text) ?? 0.0,
+          'service': _serviceController.text,
+          'latitude': _selectedLocation.latitude,
+          'longitude': _selectedLocation.longitude,
+          'address': _addressController.text,
+        }, SetOptions(merge: true));
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      }
+    }
+  }
+
+```
+
 
 ## Requirement Analysis
 ### Technical Feasibility
