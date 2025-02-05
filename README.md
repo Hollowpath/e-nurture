@@ -157,20 +157,150 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
 }
 ```
 
-2. **Push Notifications for Real-Time Updates**  
-   Push notifications are implemented to provide real-time updates to both parents and caregivers. For example, parents will receive notifications when a caregiver confirms their booking, and caregivers will be alerted about new job offers or training opportunities, keeping them engaged and informed.
+2. **Push Notifications for Real-Time Updates** 
+#### Implemented by **Dhazreel Aiman Bin Darmawi (Matric No: 2116597)**
+   Push notifications are implemented to provide real-time updates to both parents and caregivers. For example, parents will receive notifications when a caregiver confirms their booking.
+```dart
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-3. **In-App Messaging and Communication**  
-   The app uses mobile device communication tools (SMS, push notifications, in-app chat) for seamless communication between parents, caregivers, and platform support. This enables instant messaging and secure exchanges of information, making the app highly interactive.
+class NotificationService {
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
-4. **Camera Integration for Profile Photos and Document Uploads**  
-   The app allows both parents and caregivers to upload **profile photos**, **certifications**, and **training documents** directly via the mobile device's camera. This ensures that both parties have up-to-date profiles and documents that can be verified, helping to build trust within the platform.
+  NotificationService() {
+    _initializeNotifications();
+  }
 
-5. **Push-Based Training and Certification Notifications**  
-   Caregivers can receive **push notifications** about new training opportunities, certification deadlines, or reminders for skill updates. These notifications will be personalized based on caregivers' profiles, ensuring that they stay on top of necessary qualifications.
+  void _initializeNotifications() {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
-6. **User Profile and Sentiment-Based Review System**  
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> showNotification(String status, String caregiverName) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'caretaker_request_channel',
+      'Caretaker Request Notifications',
+      channelDescription: 'Notifications for caretaker requests',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await _flutterLocalNotificationsPlugin.show(
+      0,
+      'Booking $status',
+      'Your booking request has been $status by $caregiverName.',
+      platformChannelSpecifics,
+      payload: caregiverName,
+    );
+  }
+}
+```
+
+6. **User Profile and Sentiment-Based Review System**
+#### Implemented by **Dhazreel Aiman Bin Darmawi (Matric No: 2116597)**
    **Mobile-based sentiment analysis** can help summarize caregiver reviews into an overall sentiment score. Ratings and reviews will be collected and displayed within the app to build trust and ensure transparency between caregivers and parents.
+```dart
+// Rating and Reviews Functionality
+
+double _averageRating = 0.0;
+List<Map<String, dynamic>> _reviews = [];
+
+// Fetch reviews from Firestore
+Future<void> _fetchReviews() async {
+  User? user = _auth.currentUser;
+  if (user != null) {
+    QuerySnapshot querySnapshot = await _firestore
+        .collection('reviews')
+        .where('caregiverID', isEqualTo: user.uid)
+        .get();
+
+    setState(() {
+      _reviews = querySnapshot.docs.map((doc) {
+        return {
+          'rating': doc['rating'] ?? 0.0,
+          'comment': doc['comment'] ?? '',
+          'reviewer': doc['reviewer'] ?? 'Anonymous',
+          'timestamp': doc['timestamp'] ?? Timestamp.now(),
+        };
+      }).toList();
+    });
+
+    _calculateAverageRating();
+  }
+}
+
+// Calculate average rating
+void _calculateAverageRating() {
+  if (_reviews.isNotEmpty) {
+    double totalRating = _reviews.fold(0, (sum, review) => sum + review['rating']);
+    setState(() {
+      _averageRating = totalRating / _reviews.length;
+    });
+  }
+}
+
+// Widget to display ratings and reviews
+Widget _buildRatingsAndReviews() {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Ratings & Reviews', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              Icon(Icons.star, color: Colors.amber),
+              Text(_averageRating.toStringAsFixed(1)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _reviews.isNotEmpty
+              ? Column(
+                  children: _reviews.map((review) {
+                    return ListTile(
+                      leading: Icon(Icons.person, color: Colors.grey),
+                      title: Text(review['reviewer']),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: List.generate(5, (index) {
+                              return Icon(
+                                index < review['rating'] ? Icons.star : Icons.star_border,
+                                color: Colors.amber,
+                              );
+                            }),
+                          ),
+                          Text(review['comment']),
+                          Text(
+                            DateFormat('yyyy-MM-dd').format((review['timestamp'] as Timestamp).toDate()),
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                )
+              : const Center(child: Text('No reviews yet')),
+        ],
+      ),
+    ),
+  );
+}
+
+```
 
 ## Requirement Analysis
 ### Technical Feasibility
