@@ -29,11 +29,133 @@ The objective of this project is to develop a conceptual eNurture business model
 ### Preferred Platform
 Platform: Android Mobile App (Only)
 
-### Features and Functionalities
-The following features and functionalities leverage key mobile device capabilities, enhancing user experience and app performance:
+## Features and Functionalities
+### **Geolocation Services**
+#### Implemented by **Faizal Akhtar Bin Azhar (Matric No: 2124565)**
+- **Real-time caregiver location tracking.**
+- **Google Maps API integration for service discovery.**
+- **User-driven location selection.**
 
-1. **Geolocation Services for Booking and Matching Caregivers**  
-   The app integrates **GPS** and **geolocation services** to help parents find nearby childcare providers in real time. This feature enhances the booking process by displaying caregivers who are within a user's preferred distance, ensuring convenience and accessibility.
+#### **Code Snippets**
+##### **1. Getting the User’s Current Location**
+```dart
+import 'package:geolocator/geolocator.dart';
+
+class LocationService {
+  Future<Position> getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled. Please enable them.');
+    }
+
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return Future.error('Location permission denied. Enable it in settings.');
+    }
+
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  }
+}
+```
+##### **2. Displaying Caregivers on Google Maps**
+```dart
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+class MapScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> caregivers;
+  MapScreen({required this.caregivers});
+
+  @override
+  _MapScreenState createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  late GoogleMapController mapController;
+
+  Set<Marker> _createMarkers() {
+    Set<Marker> markers = {};
+    var caregiver = widget.caregivers[0];
+    markers.add(
+      Marker(
+        markerId: MarkerId(caregiver['name']),
+        position: LatLng(caregiver['latitude'], caregiver['longitude']),
+        infoWindow: InfoWindow(
+          title: caregiver['name'],
+          snippet: 'Rating: ${caregiver['rating']}',
+        ),
+      ),
+    );
+    return markers;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Caregiver's Location")),
+      body: GoogleMap(
+        onMapCreated: (GoogleMapController controller) {
+          mapController = controller;
+        },
+        initialCameraPosition: CameraPosition(
+          target: LatLng(widget.caregivers[0]['latitude'], widget.caregivers[0]['longitude']),
+          zoom: 14.0,
+        ),
+        markers: _createMarkers(),
+      ),
+    );
+  }
+}
+```
+
+### **Image Uploading for Certifications**
+#### Implemented by **Faizal Akhtar Bin Azhar (Matric No: 2124565)**
+- **Uploading caregiver training certificates to Firebase Storage.**
+- **Displaying uploaded certifications as images within the app.**
+
+##### **1. Uploading Certification to Firebase**
+```dart
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class TrainingCertificationPage extends StatefulWidget {
+  @override
+  _TrainingCertificationPageState createState() => _TrainingCertificationPageState();
+}
+
+class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
+  Future<void> _uploadCertification() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      try {
+        final storageRef = FirebaseStorage.instance.ref().child('certificates/${pickedFile.name}');
+        final uploadTask = storageRef.putFile(File(pickedFile.path));
+        final snapshot = await uploadTask.whenComplete(() {});
+        final fileUrl = await snapshot.ref.getDownloadURL();
+        final String uid = FirebaseAuth.instance.currentUser!.uid;
+
+        await FirebaseFirestore.instance.collection('certifications').add({
+          'uid': uid,
+          'name': pickedFile.name,
+          'fileUrl': fileUrl,
+        });
+      } catch (e) {
+        print('Failed to upload certification: $e');
+      }
+    }
+  }
+}
+```
 
 2. **Push Notifications for Real-Time Updates**  
    Push notifications are implemented to provide real-time updates to both parents and caregivers. For example, parents will receive notifications when a caregiver confirms their booking, and caregivers will be alerted about new job offers or training opportunities, keeping them engaged and informed.
@@ -84,13 +206,13 @@ The app uses Firebase for backend services including authentication, real-time d
 
 ## Assigned Tasks
 ### Authentication and User Management
-- **Faizal Akhtar Bin Azhar, Matric No: 2124565**:
+- **Hanif Asyraf Bin Mohd Sabri, Matric No: 2217813**:
   - Implement Firebase Authentication to enable user registration, login, and logout (parents and caregivers).
   - Set up role-based access (e.g., parent vs. caregiver) within the app.
   - Create a simple user profile screen using TextField and ListView widgets for editing profile details.
 
 ### Push Notifications
-- **Dhazreel Aiman Bin Darmawi, Matric No: 2116597**:
+- **Hanif Asyraf Bin Mohd Sabri, Matric No: 2217813**:
   - Integrate Firebase Cloud Messaging to send real-time notifications (e.g., booking confirmations, training reminders).
 
 ### UI/UX Implementation
@@ -100,11 +222,11 @@ The app uses Firebase for backend services including authentication, real-time d
   - Implement state management (e.g., Provider or setState) for dynamic UI updates like filtering caregiver profiles by location or rating.
 
 ### Real-Time Communication
-- **Faizal Akhtar Bin Azhar, Matric No: 2124565**:
+- **Hanif Asyraf Bin Mohd Sabri, Matric No: 2217813**:
   - Use Firebase Realtime Database or Firestore to enable in-app messaging between parents and caregivers.
 
 ### Geolocation and Maps Integration
-- **Dhazreel Aiman Bin Darmawi, Matric No: 2116597**:
+- **Faizal Akhtar Bin Azhar, Matric No: 2124565**:
   - Implement Google Maps API to display caregivers' locations on a map.
   - Add features to filter caregivers by proximity using geolocation services.
 
@@ -114,7 +236,7 @@ The app uses Firebase for backend services including authentication, real-time d
   - Build a calendar view for caregivers to manage their availability.
 
 ### Profile and Document Management
-- **Shared Contribution**:
+- **Faizal Akhtar Bin Azhar, Matric No: 2124565**:
   - Enable caregivers to upload profile photos and certifications using camera and file picker plugins.
 
 ### Shared Responsibilities
@@ -127,7 +249,7 @@ The app uses Firebase for backend services including authentication, real-time d
 - **All Members**:
   - Collaborate on GitHub for seamless integration of front-end and back-end components.
 
-## What You’ll Apply From the Course
+## What We Applied from the Course
 1. **Flutter Basics**: Use widgets like Column, Row, Stack, Container, and ListView for layout.
 2. **State Management**: Apply Provider, setState, or other state management tools for dynamic updates.
 3. **Firebase**: Authentication, Realtime Database, Firestore, and Cloud Messaging.
@@ -139,3 +261,9 @@ The app uses Firebase for backend services including authentication, real-time d
 Clark, K., Lovich, D., McBride, L., De Santis, N., Milian, R., & Baskin, T. (2023, May 3). Reinventing Childcare for Today’s Workforce. Boston Consulting Group. https://www.bcg.com/publications/2023/reinventing-the-childcare-industry-for-the-workforce-of-today?form=MG0AV3
 
 Modestino, A. S., Ladge, J. J., Swartz, A., & Lincoln, A. (2021, April 29). Childcare Is a Business Issue. Harvard Business Review. https://hbr.org/2021/04/childcare-is-a-business-issue?form=MG0AV3
+
+- **Google Maps API Documentation**: [Google Maps for Flutter](https://pub.dev/packages/google_maps_flutter)
+
+- **Firebase Storage for Flutter**: [Firebase Docs](https://firebase.flutter.dev/docs/storage/overview/)
+
+- **Geolocator Plugin**: [Geolocator Package](https://pub.dev/packages/geolocator)

@@ -48,7 +48,6 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/parent': (context) => const ParentApp(),
         '/childcare': (context) => const CaregiverApp(),
-        // '/donor': (context) => DonorHome(),
       },
     );
   }
@@ -84,8 +83,6 @@ class AuthWrapper extends StatelessWidget {
                         return const ParentApp();
                       case 'Childcare Giver':
                         return const CaregiverApp();
-                      // case 'Donor':
-                      //   return DonorHome();
                       default:
                         return const LoginScreen();
                     }
