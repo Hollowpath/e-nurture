@@ -301,7 +301,10 @@ class CaregiverHomeScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDayIcons(bookingData['selectedDays']),
+                            SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: _buildDayIcons(bookingData['selectedDays']),
+                            ),
                           const SizedBox(height: 5),
                           Text('Parent: $parentName'),
                           Text('Children: $children'),

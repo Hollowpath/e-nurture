@@ -43,7 +43,7 @@ class ParentCard extends StatefulWidget {
   _ParentCardState createState() => _ParentCardState();
 }
 
-class _ParentCardState extends State<ParentCard> {
+class _ParentCardState extends State<ParentCard> with WidgetsBindingObserver {
   bool _showBookingForm = false;
   bool _everyday = false;
   List<String> _selectedDays = [];
@@ -54,6 +54,7 @@ class _ParentCardState extends State<ParentCard> {
   String _status = 'Pending';
   double _rating = 0.0;
   String _review = '';
+  bool _isInBackground = false;
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -65,8 +66,22 @@ class _ParentCardState extends State<ParentCard> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     initializeNotifications();
     _listenToBookingStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    setState(() {
+      _isInBackground = state == AppLifecycleState.paused;
+    });
   }
 
   void initializeNotifications() {
@@ -80,6 +95,8 @@ class _ParentCardState extends State<ParentCard> {
   }
 
   Future<void> showNotification(String status) async {
+    if (!_isInBackground) return;
+
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'caretaker_request_channel',
