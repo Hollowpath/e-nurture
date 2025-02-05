@@ -361,14 +361,6 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     );
   }
 
-
-  // Save Profile button
-  Widget _buildSaveProfileButton() {
-    return ElevatedButton(
-      onPressed: _updateProfile,
-      child: const Text('Save Profile'),
-    );
-  }
   Widget _buildEarningsAndPayments() {
     return Card(
       child: Padding(
@@ -567,8 +559,6 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
               _buildPersonalInformation(),
               const SizedBox(height: 20),
               _buildLocationPicker(),
-              const SizedBox(height: 20),
-              _buildSaveProfileButton(),
               const SizedBox(height: 20),
               _buildCertifications(context),
               const SizedBox(height: 20),

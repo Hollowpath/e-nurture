@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen
 import '../pages/availability_page.dart'; // Import the AvailabilityPage
 
@@ -42,7 +43,7 @@ class ParentCard extends StatefulWidget {
   _ParentCardState createState() => _ParentCardState();
 }
 
-class _ParentCardState extends State<ParentCard> {
+class _ParentCardState extends State<ParentCard> with WidgetsBindingObserver {
   bool _showBookingForm = false;
   bool _everyday = false;
   List<String> _selectedDays = [];
@@ -53,6 +54,10 @@ class _ParentCardState extends State<ParentCard> {
   String _status = 'Pending';
   double _rating = 0.0;
   String _review = '';
+  bool _isInBackground = false;
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   final List<String> _daysOfWeek = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -61,36 +66,58 @@ class _ParentCardState extends State<ParentCard> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    initializeNotifications();
     _listenToBookingStatus();
   }
 
-  void _listenToBookingStatus() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
-    FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('bookings')
-        .where('caregiverID', isEqualTo: widget.caregiverId)
-        .snapshots()
-        .listen((snapshot) {
-      if (snapshot.docs.isNotEmpty) {
-        setState(() {
-          _isBooked = true;
-          _status = snapshot.docs.first['status'];
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isBooked = false;
-          _status = 'Pending';
-          _isLoading = false;
-        });
-      }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    setState(() {
+      _isInBackground = state == AppLifecycleState.paused;
     });
   }
 
+  void initializeNotifications() {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> showNotification(String status) async {
+    if (!_isInBackground) return;
+
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'caretaker_request_channel',
+      'Caretaker Request Notifications',
+      channelDescription: 'Notifications for caretaker requests',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Booking $status',
+      'Your booking request has been $status by the caregiver.',
+      platformChannelSpecifics,
+      payload: widget.name,
+    );
+  }
   Future<void> _showAvailability() async {
     final caregiverDoc = await FirebaseFirestore.instance
         .collection('users')
@@ -110,6 +137,38 @@ class _ParentCardState extends State<ParentCard> {
       );
     }
   }
+
+  void _listenToBookingStatus() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('bookings')
+        .where('caregiverID', isEqualTo: widget.caregiverId)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        final newStatus = snapshot.docs.first['status'];
+        if (_status != newStatus && (newStatus == 'Accepted' || newStatus == 'Cancelled')) {
+          showNotification(newStatus);
+        }
+        setState(() {
+          _isBooked = true;
+          _status = newStatus;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isBooked = false;
+          _status = 'Pending';
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
 
   Future<void> _submitRatingAndReview() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -556,3 +615,7 @@ class _ParentCardState extends State<ParentCard> {
     });
   }
 }
+
+
+
+

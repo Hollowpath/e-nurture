@@ -301,17 +301,21 @@ class CaregiverHomeScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${_formatDate(date)} at $time',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                            SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: _buildDayIcons(bookingData['selectedDays']),
                             ),
-                          ),
                           const SizedBox(height: 5),
                           Text('Parent: $parentName'),
                           Text('Children: $children'),
                           Text('Location: $location'),
+                          Text(
+                            _formatDate(date),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -324,7 +328,8 @@ class CaregiverHomeScreen extends StatelessWidget {
       },
     );
   }
-  Widget _buildDayIcons(List<String> days) {
+
+  Widget _buildDayIcons(List<dynamic> days) {
     final dayIcons = {
       'Mon': Icons.calendar_today,
       'Tue': Icons.calendar_today,

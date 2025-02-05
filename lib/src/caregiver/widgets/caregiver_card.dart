@@ -31,41 +31,7 @@ class CaregiverCard extends StatelessWidget {
     this.onMessageParent,
   });
 
-    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
 
-    void initializeNotifications() {
-      const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-      final InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
-
-      flutterLocalNotificationsPlugin.initialize(initializationSettings);
-    }
-
-    Future<void> showNotification(String parentName) async {
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'caretaker_request_channel',
-      'Caretaker Request Notifications',
-      channelDescription: 'Notifications for accepted caretaker requests',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: false,
-      );
-
-      const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-
-      await flutterLocalNotificationsPlugin.show(
-      0,
-      'Booking Accepted',
-      'Your booking request has been accepted by the caregiver.',
-      platformChannelSpecifics,
-      payload: parentName,
-      );
-    }
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +94,7 @@ class CaregiverCard extends StatelessWidget {
                 content: Text('Booking accepted!'),
               ),
               );
-              await showNotification(parentName);
+              // await showNotification(parentName);
             }
             },
             child: const Text('Accept'),
