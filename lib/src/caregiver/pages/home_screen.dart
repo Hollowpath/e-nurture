@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'booking_list_page.dart';
+import 'profile_screen.dart';
 
 class CaregiverHomeScreen extends StatelessWidget {
   const CaregiverHomeScreen({super.key});
@@ -39,7 +40,7 @@ class CaregiverHomeScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Availability Status
-            _buildAvailabilityStatus(true), // Example availability status
+            _buildAvailabilityDetails(), // Example availability status
             const SizedBox(height: 20),
 
             // Upcoming Bookings
@@ -65,89 +66,172 @@ class CaregiverHomeScreen extends StatelessWidget {
 
   // Profile Summary Widget
   Widget _buildProfileSummary() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              backgroundImage: AssetImage('assets/caregiver.jpg'), // Add caregiver image
-              radius: 30,
-            ),
-            const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sarah, 36',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 5),
-                Row(
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Center(child: Text('No user logged in'));
+    }
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+          return const Center(child: Text('Error loading profile data'));
+        }
+
+        final userData = snapshot.data!.data() as Map<String, dynamic>;
+        final name = userData['name'] ?? 'Unknown';
+        final age = userData['age'] ?? 'Unknown';
+        final rating = userData['rating'] ?? 0.0;
+
+        return FutureBuilder<QuerySnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('certifications')
+              .where('uid', isEqualTo: user.uid)
+              .get(),
+          builder: (context, certSnapshot) {
+            if (certSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (certSnapshot.hasError || !certSnapshot.hasData) {
+              return const Center(child: Text('Error loading certifications'));
+            }
+
+            final certifications = certSnapshot.data!.docs.map((doc) {
+              final certData = doc.data() as Map<String, dynamic>;
+              return certData['name'] ?? 'Not certified';
+            }).toList();
+
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
                   children: [
-                    Icon(Icons.star, color: Colors.amber, size: 16),
-                    Text('4.5'),
+                    CircleAvatar(
+                      backgroundImage: userData['image'] != null
+                          ? AssetImage('assets/images/${userData['image']}')
+                          : const AssetImage('assets/caregiver.jpg') as ImageProvider,
+                      radius: 30,
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$name, $age',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 16),
+                            Text(rating.toString()),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: certifications.map((cert) => Text(cert)).toList(),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CaregiverProfileScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('Edit Profile'),
+                    ),
                   ],
                 ),
-                SizedBox(height: 5),
-                Text('CPR Certified'),
-              ],
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () {
-                // Navigate to edit profile screen
-              },
-              child: const Text('Edit Profile'),
-            ),
-          ],
-        ),
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
   // Availability Status Widget
-  Widget _buildAvailabilityStatus(bool isAvailable) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Availability',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Row(
+
+  Widget _buildAvailabilityDetails() {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Center(child: Text('No user logged in'));
+    }
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+          return const Center(child: Text('Error loading profile data'));
+        }
+
+        final availabilityData = snapshot.data!.data() as Map<String, dynamic>;
+        final startTime = availabilityData['startTime'] ?? 'N/A';
+        final endTime = availabilityData['endTime'] ?? 'N/A';
+        final unavailableDays = List<String>.from(availabilityData['unavailableDays'] ?? []);
+
+        // Convert and sort unavailable days
+        final sortedUnavailableDays = unavailableDays.map((day) {
+          final date = DateTime.parse(day);
+          return date;
+        }).toList()
+          ..sort();
+
+        // Format dates and take the first 3
+        final formattedUnavailableDays = sortedUnavailableDays.take(3).map((date) {
+          return '${date.day} ${_monthName(date.month)} ${date.year}';
+        }).toList();
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Switch(
-                  value: isAvailable,
-                  onChanged: (value) {
-                    // Update availability status
-                  },
+                const Text(
+                  'Availability Details',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  isAvailable ? 'Available Today' : 'Unavailable',
-                  style: TextStyle(
-                    color: isAvailable ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const SizedBox(height: 10),
+                Text('Start Time: $startTime'),
+                Text('End Time: $endTime'),
+                const SizedBox(height: 10),
+                const Text(
+                  'Unavailable Days:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
+                ...formattedUnavailableDays.map((day) => Text(day)).toList(),
               ],
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () {
-                // Navigate to set availability screen
-              },
-              child: const Text('Set Availability'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
+  }
+
+  String _monthName(int month) {
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return monthNames[month - 1];
   }
 
   // Upcoming Bookings Widget
@@ -174,7 +258,7 @@ class CaregiverHomeScreen extends StatelessWidget {
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: bookings.map((booking) {
+          children: bookings.take(3).map((booking) {
             final bookingData = booking.data() as Map<String, dynamic>;
 
             // Fetching parent information
@@ -218,7 +302,7 @@ class CaregiverHomeScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${date.toLocal()} at $time',
+                            '${_formatDate(date)} at $time',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -239,6 +323,35 @@ class CaregiverHomeScreen extends StatelessWidget {
         );
       },
     );
+  }
+  Widget _buildDayIcons(List<String> days) {
+    final dayIcons = {
+      'Mon': Icons.calendar_today,
+      'Tue': Icons.calendar_today,
+      'Wed': Icons.calendar_today,
+      'Thu': Icons.calendar_today,
+      'Fri': Icons.calendar_today,
+      'Sat': Icons.calendar_today,
+      'Sun': Icons.calendar_today,
+    };
+
+    return Row(
+      children: days.map((day) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Column(
+            children: [
+              Icon(dayIcons[day] ?? Icons.error),
+              Text(day),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day} ${_monthName(date.month)} ${date.year}';
   }
 
   // Earnings Summary Widget

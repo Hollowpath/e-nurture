@@ -367,7 +367,8 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     return ElevatedButton(
       onPressed: _updateProfile,
       child: const Text('Save Profile'),
-
+    );
+  }
   Widget _buildEarningsAndPayments() {
     return Card(
       child: Padding(
@@ -567,23 +568,9 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
               const SizedBox(height: 20),
               _buildLocationPicker(),
               const SizedBox(height: 20),
-              _buildLocationPicker(),
-              const SizedBox(height: 20),
               _buildSaveProfileButton(),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _logOut,
-                child: const Text('Log Out'),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: _removeAccount,
-                child: const Text('Remove Account'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              ),
               _buildCertifications(context),
-              const SizedBox(height: 20),
-              _buildRatesAndServices(),
               const SizedBox(height: 20),
               _buildEarningsAndPayments(),
               const SizedBox(height: 20),
