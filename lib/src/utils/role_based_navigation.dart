@@ -28,9 +28,9 @@ class RoleBasedNavigation {
 
         switch (role) {
           case 'Parent':
-            return ParentApp();
+            return const ParentApp();
           case 'Childcare Giver':
-            return CaregiverApp();
+            return const CaregiverApp();
           default:
             return const LoginScreen();
         }

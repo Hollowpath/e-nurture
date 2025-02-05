@@ -7,11 +7,11 @@ import 'src/auth/login_screen.dart';
 import 'src/parent/parent_app.dart';
 import 'src/caregiver/caregiver_app.dart';
 import 'package:get/get.dart';
-// import 'donor_home.dart';
+import 'src/utils/flutter_local_notifications.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
@@ -26,7 +26,8 @@ void main() async {
   } else {
     await Firebase.initializeApp();
   }
-
+  initializeNotifications();
+  
   runApp(const MyApp());
 }
 
@@ -42,16 +43,17 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: AuthWrapper(),
+      home: const AuthWrapper(),
       routes: {
-        '/login': (context) => LoginScreen(),
-        '/parent': (context) => ParentApp(),
-        '/childcare': (context) => CaregiverApp(),
-        // '/donor': (context) => DonorHome(),
+        '/login': (context) => const LoginScreen(),
+        '/parent': (context) => const ParentApp(),
+        '/childcare': (context) => const CaregiverApp(),
       },
     );
   }
 }
+
+
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -64,7 +66,7 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.active) {
           final User? user = snapshot.data;
           if (user == null) {
-            return LoginScreen();
+            return const LoginScreen();
           } else {
             return FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
@@ -78,16 +80,14 @@ class AuthWrapper extends StatelessWidget {
                     
                     switch (role) {
                       case 'Parent':
-                        return ParentApp();
+                        return const ParentApp();
                       case 'Childcare Giver':
-                        return CaregiverApp();
-                      // case 'Donor':
-                      //   return DonorHome();
+                        return const CaregiverApp();
                       default:
-                        return LoginScreen();
+                        return const LoginScreen();
                     }
                   }
-                  return LoginScreen();
+                  return const LoginScreen();
                 }
                 return const Center(child: CircularProgressIndicator());
               },
