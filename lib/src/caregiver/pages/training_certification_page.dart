@@ -17,13 +17,15 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
   bool _isUploading = false;
   double _uploadProgress = 0.0;
   List<Map<String, String>> _certifications = []; // List of certifications
+  final TextEditingController _certificateNameController = TextEditingController();
 
   // Upload Certification
   Future<void> _uploadCertification() async {
     final ImagePicker picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final String certificateName = _certificateNameController.text.trim();
 
-    if (pickedFile != null) {
+    if (pickedFile != null && certificateName.isNotEmpty) {
       setState(() {
         _isUploading = true;
       });
@@ -45,7 +47,7 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
         // Store certificate in Firestore
         await FirebaseFirestore.instance.collection('certifications').add({
           'uid': uid,  // Save UID with certificate
-          'name': pickedFile.name,
+          'name': certificateName,
           'fileUrl': fileUrl,  // Store the file URL
         });
 
@@ -55,10 +57,11 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
         setState(() {
           _isUploading = false;
           _uploadProgress = 0.0;
+          _certificateNameController.clear();
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${pickedFile.name} uploaded successfully!')),
+          SnackBar(content: Text('$certificateName uploaded successfully!')),
         );
       } catch (e) {
         setState(() {
@@ -68,6 +71,10 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
           SnackBar(content: Text('Failed to upload certification: $e')),
         );
       }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a file and enter a certificate name.')),
+      );
     }
   }
 
@@ -91,7 +98,6 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
       _certifications = certifications;
     });
   }
-
 
   @override
   void initState() {
@@ -178,6 +184,13 @@ class _TrainingCertificationPageState extends State<TrainingCertificationPage> {
                 ],
               ),
             _buildCertificationsList(),
+            TextField(
+              controller: _certificateNameController,
+              decoration: const InputDecoration(
+                labelText: 'Certificate Name',
+              ),
+            ),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: _uploadCertification,
               child: const Text('Upload Certification'),
