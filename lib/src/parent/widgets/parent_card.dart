@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_nurture/src/geolocator/map_screen.dart'; // Import the MapScreen
+import '../pages/availability_page.dart'; // Import the AvailabilityPage
 
 class ParentCard extends StatefulWidget {
   final String caregiverId;
@@ -50,6 +51,8 @@ class _ParentCardState extends State<ParentCard> {
   bool _isLoading = true;
   bool _isBooked = false;
   String _status = 'Pending';
+  double _rating = 0.0;
+  String _review = '';
 
   final List<String> _daysOfWeek = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -58,39 +61,121 @@ class _ParentCardState extends State<ParentCard> {
   @override
   void initState() {
     super.initState();
-    _fetchBookingStatus();
+    _listenToBookingStatus();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _fetchBookingStatus();
-  }
-
-  Future<void> _fetchBookingStatus() async {
+  void _listenToBookingStatus() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final bookingQuery = await FirebaseFirestore.instance
+    FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('bookings')
         .where('caregiverID', isEqualTo: widget.caregiverId)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        setState(() {
+          _isBooked = true;
+          _status = snapshot.docs.first['status'];
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isBooked = false;
+          _status = 'Pending';
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _showAvailability() async {
+    final caregiverDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
         .get();
 
-    if (bookingQuery.docs.isNotEmpty) {
-      setState(() {
-        _isBooked = true;
-        _status = bookingQuery.docs.first['status'];
-        _isLoading = false;
+    if (caregiverDoc.exists) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AvailabilityPage(caregiverId: widget.caregiverId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Caregiver not found')),
+      );
+    }
+  }
+
+  Future<void> _submitRatingAndReview() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final reviewQuery = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .collection('reviews')
+        .where('parentID', isEqualTo: user.uid)
+        .get();
+
+    if (reviewQuery.docs.isNotEmpty) {
+      // Update the existing review
+      final reviewDocId = reviewQuery.docs.first.id;
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.caregiverId)
+          .collection('reviews')
+          .doc(reviewDocId)
+          .update({
+        'rating': _rating,
+        'review': _review,
+        'timestamp': FieldValue.serverTimestamp(),
       });
     } else {
-      setState(() {
-        _isBooked = false;
-        _status = 'Pending';
-        _isLoading = false;
+      // Add a new review
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.caregiverId)
+          .collection('reviews')
+          .add({
+        'parentID': user.uid,
+        'rating': _rating,
+        'review': _review,
+        'timestamp': FieldValue.serverTimestamp(),
       });
     }
+
+    // Recalculate the average rating
+    final allReviewsQuery = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .collection('reviews')
+        .get();
+
+    double totalRating = 0.0;
+    for (var doc in allReviewsQuery.docs) {
+      totalRating += doc['rating'];
+    }
+    final averageRating = totalRating / allReviewsQuery.docs.length;
+
+    // Update the caregiver's rating in Firestore
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.caregiverId)
+        .update({'rating': averageRating});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Review submitted!')),
+    );
+
+    setState(() {
+      _rating = 0.0;
+      _review = '';
+    });
   }
 
   @override
@@ -121,7 +206,7 @@ class _ParentCardState extends State<ParentCard> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: AssetImage(widget.image),
+                  backgroundImage: AssetImage('assets/images/${widget.image}'),
                 ),
                 const SizedBox(width: 10),
                 Column(
@@ -135,10 +220,20 @@ class _ParentCardState extends State<ParentCard> {
                       ),
                     ),
                     Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        Text('${widget.rating}'),
-                      ],
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          index < widget.rating ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 16,
+                        );
+                      }),
+                    ),
+                    Text(
+                      widget.rating.toString(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -148,7 +243,7 @@ class _ParentCardState extends State<ParentCard> {
             Text('\$${widget.hourlyRate}/hour'),
             Text('Certifications: ${widget.certifications.join(', ')}'),
             Text('Service: ${widget.service}'),
-            Text('Availability: ${widget.availability}'),
+            // Text('Availability: ${widget.availability}'),
             Text('Distance: ${widget.distance}'),
             if (_isBooked) // Display status if it's in the Booked List
               Padding(
@@ -192,11 +287,17 @@ class _ParentCardState extends State<ParentCard> {
                       ),
                     );
                   },
-                  child: const Text('View Profile'),
+                  child: const Text('View Location'),
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _showAvailability,
+              child: const Text('Show Availability'),
+            ),
             if (_showBookingForm) _buildBookingForm(),
+            if (_status == 'Accepted') _buildRatingAndReviewForm(),
           ],
         ),
       ),
@@ -304,6 +405,55 @@ class _ParentCardState extends State<ParentCard> {
     );
   }
 
+  Widget _buildRatingAndReviewForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        const Text(
+          'Rate and Review:',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: List.generate(5, (index) {
+            return IconButton(
+              icon: Icon(
+                index < _rating ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+              ),
+              onPressed: () {
+                setState(() {
+                  _rating = index + 1.0;
+                });
+              },
+            );
+          }),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          decoration: const InputDecoration(
+            labelText: 'Review',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+          onChanged: (value) {
+            setState(() {
+              _review = value;
+            });
+          },
+        ),
+        const SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: _rating > 0 && _review.isNotEmpty
+              ? _submitRatingAndReview
+              : null,
+          child: const Text("Submit Review"),
+        ),
+      ],
+    );
+  }
+
   Future<void> _submitBooking() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -377,5 +527,32 @@ class _ParentCardState extends State<ParentCard> {
 
       _fetchBookingStatus(); // Refresh booking status after canceling
     }
+  }
+
+  void _fetchBookingStatus() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('bookings')
+        .where('caregiverID', isEqualTo: widget.caregiverId)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        setState(() {
+          _isBooked = true;
+          _status = snapshot.docs.first['status'];
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isBooked = false;
+          _status = 'Pending';
+          _isLoading = false;
+        });
+      }
+    });
   }
 }

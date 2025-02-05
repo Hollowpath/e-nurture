@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'training_certification_page.dart';
 
 class CaregiverProfileScreen extends StatefulWidget {
@@ -40,6 +39,8 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     super.initState();
     _loadUserData();
     _loadCertifications();
+    _fetchReviews(); // Fetch reviews when the screen loads
+    _calculateAverageRating(); // Calculate average rating when the screen loads
   }
 
   // Load user data from Firestore
@@ -62,7 +63,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
             _userData['latitude'] ?? 0.0,
             _userData['longitude'] ?? 0.0,
           );
-          _selectedProfilePicture = _userData['profileImageUrl'];
+          _selectedProfilePicture = _userData['image'];
         });
       }
     }
@@ -94,7 +95,7 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
       User? user = _auth.currentUser;
       if (user != null) {
         await _firestore.collection('users').doc(user.uid).set({
-          'profileImageUrl': _selectedProfilePicture,
+          'image': _selectedProfilePicture,
           'caregiverID': user.uid,
           'name': _nameController.text,
           'age': int.tryParse(_ageController.text) ?? 0,
@@ -141,11 +142,11 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
               radius: 50,
               backgroundImage: _selectedProfilePicture != null
                   ? AssetImage('assets/images/$_selectedProfilePicture')
-                  : (_userData['profileImageUrl'] != null
-                      ? NetworkImage(_userData['profileImageUrl'])
+                  : (_userData['image'] != null
+                      ? NetworkImage(_userData['image'])
                       : AssetImage('assets/pfpArtboard 1.png')) as ImageProvider<Object>?,
               child: _selectedProfilePicture == null &&
-                      _userData['profileImageUrl'] == null
+                      _userData['image'] == null
                   ? const Icon(Icons.add_a_photo, size: 40)
                   : null,
             ),
@@ -360,11 +361,185 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
     );
   }
 
+
   // Save Profile button
   Widget _buildSaveProfileButton() {
     return ElevatedButton(
       onPressed: _updateProfile,
       child: const Text('Save Profile'),
+
+  Widget _buildEarningsAndPayments() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Earnings and Payments',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            const ListTile(
+              title: Text('This Week'),
+              subtitle: Text('\$200'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to payment history screen.
+              },
+              child: const Text('View Payment History'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Navigate to update payment method screen.
+              },
+              child: const Text('Update Payment Method'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatingsAndReviews() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ratings and Reviews',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            FutureBuilder<double>(
+              future: _calculateAverageRating(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                }
+                final averageRating = snapshot.data ?? 0.0;
+                return Row(
+                  children: [
+                  const Text('Overall Rating: '),
+                  ...List.generate(5, (index) {
+                    return Icon(
+                    index < averageRating ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                    );
+                  }),
+                  Text(' (${averageRating.toStringAsFixed(1)}/5)'),
+                  ],
+                );
+              },
+            ),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _fetchReviews(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                }
+                final reviews = snapshot.data ?? [];
+              return Column(
+                children: [
+                ListTile(
+                  title: const Text('Number of Reviews'),
+                  subtitle: Text('${reviews.length} Reviews'),
+                ),
+                const SizedBox(height: 10),
+                ...reviews.map((review) {
+                  return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 5),
+                    child: ExpansionTile(
+                    title: Row(
+                      children: List.generate(5, (index) {
+                      return Icon(
+                        index < (review['rating'] ?? 0.0)
+                          ? Icons.star
+                          : Icons.star_border,
+                      );
+                      }),
+                    ),
+                    subtitle: Text(
+                      review['timestamp'] != null
+                        ? DateFormat('MMM dd, yyyy').format(
+                          (review['timestamp'] as Timestamp).toDate(),
+                        )
+                        : 'No date',
+                    ),
+                    children: [
+                      Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(review['review'] ?? 'No review text'),
+                      ),
+                    ],
+                    ),
+                  );
+                }).toList(),
+                ],
+              );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchReviews() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      QuerySnapshot reviewsSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('reviews')
+          .get();
+      return reviewsSnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    }
+    return [];
+  }
+
+  Future<double> _calculateAverageRating() async {
+    List<Map<String, dynamic>> reviews = await _fetchReviews();
+    if (reviews.isEmpty) return 0.0;
+    double totalRating = 0.0;
+    for (var review in reviews) {
+      totalRating += review['rating'] ?? 0.0;
+    }
+    return totalRating / reviews.length;
+  }
+
+  Widget _buildAccountActions() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Account Actions',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              title: const Text('Log Out'),
+              trailing: const Icon(Icons.logout),
+              onTap: _logOut,
+            ),
+            ListTile(
+              title: const Text('Remove Account'),
+              trailing: const Icon(Icons.delete, color: Colors.red),
+              onTap: _removeAccount,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -372,20 +547,25 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text('Caregiver Profile'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: _updateProfile,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildProfilePicture(),
               const SizedBox(height: 20),
               _buildPersonalInformation(),
               const SizedBox(height: 20),
-              _buildCertifications(context),
+              _buildLocationPicker(),
               const SizedBox(height: 20),
               _buildLocationPicker(),
               const SizedBox(height: 20),
@@ -401,6 +581,15 @@ class _CaregiverProfileScreen extends State<CaregiverProfileScreen> {
                 child: const Text('Remove Account'),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               ),
+              _buildCertifications(context),
+              const SizedBox(height: 20),
+              _buildRatesAndServices(),
+              const SizedBox(height: 20),
+              _buildEarningsAndPayments(),
+              const SizedBox(height: 20),
+              _buildRatingsAndReviews(),
+              const SizedBox(height: 20),
+              _buildAccountActions(),
             ],
           ),
         ),
