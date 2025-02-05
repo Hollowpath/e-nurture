@@ -7,7 +7,6 @@ import 'src/auth/login_screen.dart';
 import 'src/parent/parent_app.dart';
 import 'src/caregiver/caregiver_app.dart';
 import 'package:get/get.dart';
-// import 'donor_home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +46,6 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/parent': (context) => const ParentApp(),
         '/childcare': (context) => const CaregiverApp(),
-        // '/donor': (context) => DonorHome(),
       },
     );
   }
@@ -81,8 +79,6 @@ class AuthWrapper extends StatelessWidget {
                         return const ParentApp();
                       case 'Childcare Giver':
                         return const CaregiverApp();
-                      // case 'Donor':
-                      //   return DonorHome();
                       default:
                         return const LoginScreen();
                     }
